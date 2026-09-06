@@ -1,0 +1,38 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #app {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  background: #f5f6fa;
+}
+
+.page {
+  min-height: 100vh;
+  padding-bottom: 60px;
+}
+
+.primary-color {
+  color: #6c5ce7;
+}
+
+.primary-bg {
+  background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  margin: 12px;
+  padding: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin: 16px 16px 8px;
+}

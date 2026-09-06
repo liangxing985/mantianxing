@@ -1,0 +1,426 @@
+// 漫天星电竞 - 陪玩管理平台数据库设计
+// 生成命令：npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== 用户体系 ====================
+
+// 用户表（老板、陪玩、管理员统一表，用 role 区分）
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique @db.VarChar(50) // 登录用户名
+  password      String   @db.VarChar(255) // bcrypt 加密
+  phone         String?  @unique @db.VarChar(20) // 手机号
+  nickname      String   @db.VarChar(50) // 昵称
+  avatar        String?  @db.VarChar(255) // 头像URL
+  role          Role     @default(CUSTOMER) // 角色：CUSTOMER老板 / PROVIDER陪玩 / ADMIN管理员 / OPERATOR客服
+  status        UserStatus @default(ACTIVE) // 账号状态
+  realName      String?  @db.VarChar(50) // 真实姓名
+  idCard        String?  @db.VarChar(18) // 身份证号
+  isVerified    Boolean  @default(false) // 是否实名认证
+  gender        Gender?  @default(UNKNOWN)
+  bio           String?  @db.Text // 个人简介
+  kookId        String?  @unique @db.VarChar(50) // Kook 用户ID（绑定机器人）
+  lastLoginAt   DateTime?
+  lastLoginIp   String?  @db.VarChar(50)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关联
+  wallet        Wallet?
+  orders        Order[]         @relation("CustomerOrders")
+  providerOrders Order[]        @relation("ProviderOrders")
+  reviews       Review[]        @relation("CustomerReviews")
+  providerReviews Review[]      @relation("ProviderReviews")
+  messages      Message[]       @relation("UserMessages")
+  withdrawals   Withdraw[]
+  providerProfile ProviderProfile?
+  adminLogs     AdminLog[]
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+// 陪玩资料表（扩展信息）
+model ProviderProfile {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voiceCard     String?  @db.VarChar(255) // 语音介绍URL
+  introVideo    String?  @db.VarChar(255) // 介绍视频URL
+  level         Int      @default(1) // 陪玩等级 1-10
+  rating        Float    @default(5.0) // 评分 0-5
+  ratingCount   Int      @default(0) // 评价数
+  orderCount    Int      @default(0) // 完成订单数
+  totalIncome   Int      @default(0) // 累计收入（星石）
+  isOnline      Boolean  @default(false) // 是否在线
+  acceptOrder   Boolean  @default(true) // 是否接单
+  onlineStatus  OnlineStatus @default(OFFLINE)
+  applyStatus   ApplyStatus @default(PENDING) // 入驻审核状态
+  applyReason   String?  @db.Text // 申请理由
+  rejectReason  String?  @db.Text // 拒绝理由
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // 关联
+  services      ProviderService[]
+
+  @@index([isOnline])
+  @@index([acceptOrder])
+  @@map("provider_profiles")
+}
+
+// 陪玩服务关联表（陪玩能提供哪些服务及定价）
+model ProviderService {
+  id              Int      @id @default(autoincrement())
+  providerId      Int
+  providerProfile ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  serviceItemId   Int
+  serviceItem     ServiceItem @relation(fields: [serviceItemId], references: [id])
+  price           Int      // 单价（星石/小时或局）
+  unit            String   @db.VarChar(20) // 计价单位：hour局 / game局 / package包段
+  description     String?  @db.Text // 服务说明
+  isEnabled       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([providerId, serviceItemId])
+  @@map("provider_services")
+}
+
+// ==================== 游戏与服务 ====================
+
+// 游戏类目表
+model Game {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // 游戏名称：王者荣耀、和平精英、三角洲行动等
+  icon        String?  @db.VarChar(255) // 游戏图标
+  sortOrder   Int      @default(0) // 排序
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  serviceItems ServiceItem[]
+
+  @@map("games")
+}
+
+// 服务项目表
+model ServiceItem {
+  id          Int      @id @default(autoincrement())
+  gameId      Int
+  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(50) // 服务名称：陪玩、代练、教学、上分等
+  description String?  @db.Text
+  defaultPrice Int     @default(0) // 默认参考价（星石）
+  unit        String   @default("hour") @db.VarChar(20) // 默认计价单位
+  sortOrder   Int      @default(0)
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  providerServices ProviderService[]
+  orders           Order[]
+
+  @@index([gameId])
+  @@map("service_items")
+}
+
+// ==================== 订单体系 ====================
+
+// 订单表（核心）
+model Order {
+  id              Int      @id @default(autoincrement())
+  orderNo         String   @unique @db.VarChar(32) // 订单号
+  customerId      Int
+  customer        User     @relation("CustomerOrders", fields: [customerId], references: [id])
+  providerId      Int?
+  provider        User?    @relation("ProviderOrders", fields: [providerId], references: [id])
+  gameId          Int
+  serviceItemId   Int
+  serviceItem     ServiceItem @relation(fields: [serviceItemId], references: [id])
+  title           String   @db.VarChar(100) // 订单标题
+  requirement     String?  @db.Text // 老板要求
+  duration        Int      @default(1) // 数量（小时/局数）
+  unitPrice       Int      // 单价（星石）
+  totalAmount     Int      // 总金额（星石）
+  platformFee     Int      @default(0) // 平台抽成（星石）
+  providerIncome  Int      @default(0) // 陪玩实际收入（星石）
+  status          OrderStatus @default(CREATED) // 订单状态
+  contactType     String?  @db.VarChar(20) // 联系方式类型：qq / wechat / phone
+  contactValue    String?  @db.VarChar(100) // 联系方式
+  gameAccount     String?  @db.VarChar(100) // 游戏账号/区服
+  // 时间
+  paidAt          DateTime? // 支付时间
+  acceptedAt      DateTime? // 接单时间
+  startedAt       DateTime? // 开始服务时间
+  submittedAt     DateTime? // 提交报单时间
+  reviewedAt      DateTime? // 审核时间
+  completedAt     DateTime? // 完成时间
+  cancelledAt     DateTime? // 取消时间
+  cancelReason    String?  @db.Text
+  expireAt        DateTime? // 过期时间
+  // 审核
+  reviewStatus    ReviewStatus? @default(PENDING) // 报单审核状态
+  reviewerId      Int?
+  reviewComment   String?  @db.Text
+  // 评价
+  customerRating  Int?     // 老板评分 1-5
+  customerComment String?  @db.Text
+  providerReply   String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // 关联
+  evidences       OrderEvidence[]
+  walletTxns      WalletTransaction[]
+  messages        Message[]
+
+  @@index([customerId])
+  @@index([providerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+// 订单报单凭证表
+model OrderEvidence {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type        EvidenceType // 凭证类型：ENTER入队 / END结单 / RESULT战绩 / OTHER其他
+  imageUrl    String   @db.VarChar(255) // 截图URL
+  description String?  @db.VarChar(200)
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_evidences")
+}
+
+// ==================== 钱包体系 ====================
+
+// 钱包表
+model Wallet {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Int      @default(0) // 可用余额（星石）
+  frozen      Int      @default(0) // 冻结金额（星石，进行中订单）
+  totalIncome Int      @default(0) // 累计收入
+  totalRecharge Int    @default(0) // 累计充值
+  totalWithdraw Int    @default(0) // 累计提现
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactions WalletTransaction[]
+
+  @@map("wallets")
+}
+
+// 钱包流水表（只增不改，审计用）
+model WalletTransaction {
+  id          Int      @id @default(autoincrement())
+  walletId    Int
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  userId      Int
+  type        TxnType  // 类型：RECHARGE充值 / CONSUME消费 / INCOME收入 / WITHDRAW提现 / REFUND退款 / REWARD奖励 / PUNISH惩罚 / GIFT礼物 / FROZEN冻结 / UNFROZEN解冻
+  amount      Int      // 变动金额（正数增加，负数减少）
+  balanceAfter Int     // 变动后余额
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  remark      String?  @db.VarChar(200) // 备注
+  operatorId  Int?     // 操作人（后台充值/奖惩时）
+  createdAt   DateTime @default(now())
+
+  @@index([walletId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("wallet_transactions")
+}
+
+// 提现申请表
+model Withdraw {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Int      // 提现金额（星石）
+  realAmount  Float    // 实际到账金额（元）
+  fee         Int      @default(0) // 手续费（星石）
+  payMethod   String   @db.VarChar(20) // 提现方式：alipay支付宝 / wechat微信 / bank银行卡
+  payAccount  String   @db.VarChar(100) // 收款账号
+  payName     String   @db.VarChar(50) // 收款人姓名
+  status      WithdrawStatus @default(PENDING)
+  reviewerId  Int?
+  reviewComment String? @db.Text
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("withdraws")
+}
+
+// ==================== 消息与评价 ====================
+
+// 消息表
+model Message {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation("UserMessages", fields: [userId], references: [id])
+  type        MessageType // SYSTEM系统 / ORDER订单 / NOTICE公告
+  title       String   @db.VarChar(100)
+  content     String   @db.Text
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("messages")
+}
+
+// 评价表（独立存储，方便统计）
+model Review {
+  id          Int      @id @default(autoincrement())
+  orderId     Int      @unique
+  customerId  Int
+  customer    User     @relation("CustomerReviews", fields: [customerId], references: [id])
+  providerId  Int
+  provider    User     @relation("ProviderReviews", fields: [providerId], references: [id])
+  rating      Int      // 1-5星
+  content     String?  @db.Text
+  tags        String?  @db.VarChar(200) // 标签，逗号分隔
+  providerReply String? @db.Text
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([providerId])
+  @@index([rating])
+  @@map("reviews")
+}
+
+// ==================== 系统管理 ====================
+
+// 管理员操作日志
+model AdminLog {
+  id          Int      @id @default(autoincrement())
+  adminId     Int
+  admin       User     @relation(fields: [adminId], references: [id])
+  action      String   @db.VarChar(50) // 操作类型
+  targetType  String   @db.VarChar(50) // 操作对象类型
+  targetId    Int?     // 操作对象ID
+  detail      String?  @db.Text // 操作详情
+  ip          String?  @db.VarChar(50)
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@map("admin_logs")
+}
+
+// 系统配置表（键值对，后台可配置）
+model SystemConfig {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique @db.VarChar(100)
+  value       String   @db.Text
+  description String?  @db.VarChar(200)
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_configs")
+}
+
+// ==================== 枚举定义 ====================
+
+enum Role {
+  CUSTOMER   // 老板
+  PROVIDER   // 陪玩
+  ADMIN      // 管理员
+  OPERATOR   // 客服
+}
+
+enum UserStatus {
+  ACTIVE    // 正常
+  DISABLED  // 禁用
+  FROZEN    // 冻结
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum OnlineStatus {
+  ONLINE
+  BUSY
+  OFFLINE
+}
+
+enum ApplyStatus {
+  PENDING   // 待审核
+  APPROVED  // 已通过
+  REJECTED  // 已拒绝
+}
+
+enum OrderStatus {
+  CREATED      // 已创建（待支付）
+  PAID         // 已支付（待接单/抢单池）
+  ASSIGNED     // 已接单
+  SERVING      // 服务中
+  REVIEWING    // 待审核（已报单）
+  COMPLETED    // 已完成
+  CANCELLED    // 已取消
+  EXPIRED      // 已过期
+  DISPUTED     // 申诉中
+}
+
+enum ReviewStatus {
+  PENDING   // 待审核
+  APPROVED  // 审核通过
+  REJECTED  // 审核驳回
+}
+
+enum EvidenceType {
+  ENTER   // 入队截图
+  END     // 结单截图
+  RESULT  // 战绩截图
+  OTHER   // 其他
+}
+
+enum TxnType {
+  RECHARGE  // 充值
+  CONSUME   // 消费（下单）
+  INCOME    // 收入（订单结算）
+  WITHDRAW  // 提现
+  REFUND    // 退款
+  REWARD    // 奖励
+  PUNISH    // 惩罚
+  GIFT      // 礼物
+  FROZEN    // 冻结
+  UNFROZEN  // 解冻
+}
+
+enum WithdrawStatus {
+  PENDING   // 待审核
+  APPROVED  // 已通过（待打款）
+  PAID      // 已打款
+  REJECTED  // 已拒绝
+}
+
+enum MessageType {
+  SYSTEM  // 系统消息
+  ORDER   // 订单消息
+  NOTICE  // 公告
+}
