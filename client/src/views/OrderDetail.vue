@@ -51,18 +51,18 @@
     </div>
 
     <!-- 评价区 -->
-    <div class="card" v-if="order.status === 'COMPLETED' && !order.review">
+    <div class="card" v-if="order.status === 'COMPLETED' && !order.customerRating">
       <div class="card-title">评价订单</div>
       <van-rate v-model="reviewForm.rating" />
       <van-field v-model="reviewForm.comment" type="textarea" placeholder="说说这次服务体验吧" rows="2" />
       <van-button type="primary" block round style="margin-top: 12px;" @click="submitReview">提交评价</van-button>
     </div>
 
-    <div class="card" v-if="order.review">
+    <div class="card" v-if="order.customerRating">
       <div class="card-title">我的评价</div>
       <div class="review">
-        <div>{{ '⭐'.repeat(order.review.rating) }}</div>
-        <p>{{ order.review.comment || '无评价内容' }}</p>
+        <div>{{ '⭐'.repeat(order.customerRating) }}</div>
+        <p>{{ order.customerComment || '无评价内容' }}</p>
       </div>
     </div>
 
