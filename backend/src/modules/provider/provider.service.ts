@@ -444,21 +444,25 @@ export class ProviderService {
     return { success: true, count: gameIds.length };
   }
 
-  // 获取陪玩游戏（通过profileId，管理端用）
-  async getProviderGamesByProfileId(profileId: number) {
+  // 获取陪玩游戏（通过userId，管理端用）
+  async getProviderGamesByProfileId(userId: number) {
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) return [];
     const games = await this.prisma.providerGame.findMany({
-      where: { providerId: profileId },
+      where: { providerId: profile.id },
       include: { game: true },
     });
     return games.map((pg: any) => pg.game);
   }
 
-  // 设置陪玩游戏（通过profileId，管理端用）
-  async setProviderGamesByProfileId(profileId: number, gameIds: number[]) {
-    await this.prisma.providerGame.deleteMany({ where: { providerId: profileId } });
+  // 设置陪玩游戏（通过userId，管理端用）
+  async setProviderGamesByProfileId(userId: number, gameIds: number[]) {
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) throw new Error('陪玩资料不存在');
+    await this.prisma.providerGame.deleteMany({ where: { providerId: profile.id } });
     if (gameIds.length > 0) {
       await this.prisma.providerGame.createMany({
-        data: gameIds.map((gameId) => ({ providerId: profileId, gameId })),
+        data: gameIds.map((gameId) => ({ providerId: profile.id, gameId })),
       });
     }
     return { success: true, count: gameIds.length };
