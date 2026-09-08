@@ -1,15 +1,47 @@
 <template>
   <div class="order-create">
-    <van-nav-bar title="确认订单" left-arrow @click-left="$router.back()" />
+    <van-nav-bar :title="fromProvider ? '陪玩下单' : '确认订单'" left-arrow @click-left="$router.back()" />
 
-    <!-- 商品信息 -->
-    <van-cell-group inset v-if="productName" style="margin-top: 12px;">
+    <!-- 陪玩模式：陪玩信息 -->
+    <van-cell-group inset v-if="fromProvider" style="margin-top: 12px;">
+      <van-cell title="游戏" :value="gameName" />
+      <van-cell title="当前陪玩" :value="providerName" />
+      <van-cell title="当前陪玩单价" :value="providerPrice + ' 星石/小时'" />
+    </van-cell-group>
+
+    <!-- 陪玩模式：单陪/双陪切换 -->
+    <van-cell-group inset v-if="fromProvider" title="接单模式" style="margin-top: 12px;">
+      <van-cell
+        title="单陪"
+        :label="`仅 ${providerName} 一人服务`"
+        is-link
+        @click="playMode = 'single'"
+      >
+        <template #right-icon>
+          <van-icon v-if="playMode === 'single'" name="success" color="#07c160" />
+        </template>
+      </van-cell>
+      <van-cell
+        title="双陪"
+        :label="secondProvider ? `已选：${secondProvider.nickname}` : '点击选择第二位陪玩'"
+        is-link
+        @click="playMode = 'double'; if (!secondProvider) openSecondPicker()"
+      >
+        <template #right-icon>
+          <van-icon v-if="playMode === 'double'" name="success" color="#07c160" />
+        </template>
+      </van-cell>
+      <van-cell v-if="playMode === 'double' && secondProvider" title="第二位陪玩单价" :value="secondProviderPrice + ' 星石/小时'" />
+    </van-cell-group>
+
+    <!-- 商品模式：商品信息 -->
+    <van-cell-group inset v-if="!fromProvider && productName" style="margin-top: 12px;">
       <van-cell title="商品" :value="productName" />
       <van-cell title="单价" :value="productPrice + ' 星石'" />
     </van-cell-group>
 
-    <!-- 陪玩选择 -->
-    <van-cell-group inset title="选择陪玩" style="margin-top: 12px;">
+    <!-- 商品模式：陪玩选择 -->
+    <van-cell-group inset v-if="!fromProvider" title="选择陪玩" style="margin-top: 12px;">
       <van-cell
         title="暂不选择（店内陪玩都可接单）"
         :value="assignMode === 'none' ? '已选' : ''"
@@ -39,7 +71,7 @@
 
     <van-form @submit="handleSubmit">
       <van-cell-group inset title="订单信息" style="margin-top: 12px;">
-        <van-field name="duration" label="数量" :model-value="form.duration" type="digit" @update:model-value="v => form.duration = Number(v)" />
+        <van-field name="duration" label="时长(小时)" :model-value="form.duration" type="digit" @update:model-value="v => form.duration = Number(v)" />
         <van-field label="总计">
           <template #input>
             <span style="color: #f5576c; font-weight: 600; font-size: 18px;">{{ totalAmount }} 星石</span>
@@ -66,7 +98,32 @@
       </div>
     </van-form>
 
-    <!-- 陪玩选择弹窗 -->
+    <!-- 第二位陪玩选择弹窗 -->
+    <van-popup v-model:show="showSecondPicker" position="bottom" round style="height: 70%;">
+      <div class="picker-header">
+        <span>选择第二位陪玩</span>
+        <van-button size="small" type="primary" @click="confirmSecond">确定</van-button>
+      </div>
+      <div class="provider-list">
+        <div
+          v-for="p in providers"
+          :key="p.id"
+          class="provider-item"
+          :class="{ selected: tempSecondId === p.id }"
+          @click="selectSecond(p)"
+        >
+          <van-image round width="48" height="48" :src="p.avatar || defaultAvatar" />
+          <div class="provider-info">
+            <div class="name">{{ p.nickname }}</div>
+            <div class="meta">{{ p.providerProfile?.rank || '未设置' }} · {{ p._price ? p._price + '星石/小时' : '未定价' }}</div>
+          </div>
+          <van-icon v-if="tempSecondId === p.id" name="success" color="#07c160" />
+        </div>
+        <div v-if="providers.length === 0" style="text-align: center; color: #999; padding: 40px;">暂无店内陪玩</div>
+      </div>
+    </van-popup>
+
+    <!-- 商品模式陪玩选择弹窗 -->
     <van-popup v-model:show="showProviderPicker" position="bottom" round style="height: 70%;">
       <div class="picker-header">
         <span>选择陪玩（最多2人）</span>
@@ -102,31 +159,47 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
-import { getProviderList, createOrder, getWallet, getGameList } from '@/api'
+import { getProviderList, createOrder, getWallet, getGameList, getProviderDetail } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
 const providers = ref<any[]>([])
+const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
+
+// 模式判断
+const fromProvider = route.query.fromProvider === '1'
+
+// 陪玩模式参数
+const providerId = Number(route.query.providerId) || 0
+const providerName = route.query.providerName as string || ''
+const providerPrice = Number(route.query.price) || 0
+const gameId = Number(route.query.gameId) || 0
+const gameName = route.query.gameName as string || ''
+const playMode = ref<'single' | 'double'>('single')
+const secondProvider = ref<any>(null)
+const secondProviderPrice = ref(0)
+const showSecondPicker = ref(false)
+const tempSecondId = ref(0)
+
+// 商品模式参数
+const productName = route.query.productName as string || ''
+const productPrice = Number(route.query.price) || 0
+const productId = Number(route.query.productId) || 0
 const selectedProviders = ref<any[]>([])
 const tempSelected = ref<number[]>([])
 const assignMode = ref<'none' | '指定'>('none')
 const showProviderPicker = ref(false)
-const showContactPicker = ref(false)
-const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 
-// 商品预填
-const productName = route.query.productName as string || ''
-const productPrice = Number(route.query.price) || 0
-const productId = Number(route.query.productId) || 0
+const showContactPicker = ref(false)
 
 const form = reactive({
   serviceItemId: 0,
-  gameId: 0,
+  gameId: gameId || 0,
   duration: 1,
   contactType: 'QQ',
   contactValue: '',
-  requirement: productName ? `购买商品：${productName}` : '',
+  requirement: fromProvider ? `游戏：${gameName}` : (productName ? `购买商品：${productName}` : ''),
 })
 
 const contactOptions = [
@@ -135,57 +208,91 @@ const contactOptions = [
   { text: '游戏ID', value: 'GAME_ID' },
 ]
 const contactTypeText = computed(() => contactOptions.find(o => o.value === form.contactType)?.text || '')
-const totalAmount = computed(() => productPrice * form.duration)
+
+// 总价计算
+const totalAmount = computed(() => {
+  if (fromProvider) {
+    const unitPrice = playMode.value === 'double'
+      ? (providerPrice + secondProviderPrice.value)
+      : providerPrice
+    return unitPrice * form.duration
+  }
+  return productPrice * form.duration
+})
 
 const loadData = async () => {
   try {
-    // 获取店内陪玩列表
     const res: any = await getProviderList({ page: 1, pageSize: 50, isOnline: true })
-    providers.value = res.list || res.data?.list || []
+    const list = res.list || res.data?.list || []
+    // 陪玩模式下排除当前陪玩，并为每个陪玩加载该游戏的价格
+    if (fromProvider && gameId) {
+      providers.value = list.filter((p: any) => p.id !== providerId)
+      // 为每个陪玩加载价格
+      for (const p of providers.value) {
+        try {
+          const detail: any = await getProviderDetail(p.id)
+          const priced = detail.providerProfile?.pricedServices || []
+          const match = priced.find((s: any) => s.gameId === gameId)
+          p._price = match?.price || 0
+        } catch (e) { p._price = 0 }
+      }
+    } else {
+      providers.value = list
+    }
   } catch (e) {
     providers.value = []
   }
-  // 获取第一个服务项目作为默认（商品下单时不需要用户选）
-  try {
-    const games: any = await getGameList()
-    const gameList = Array.isArray(games) ? games : (games?.data || [])
-    if (gameList.length > 0 && gameList[0].serviceItems?.length > 0) {
-      form.serviceItemId = gameList[0].serviceItems[0].id
-      form.gameId = gameList[0].id
-    }
-  } catch (e) {}
+  // 商品模式：获取第一个服务项目
+  if (!fromProvider) {
+    try {
+      const games: any = await getGameList()
+      const gameList = Array.isArray(games) ? games : (games?.data || [])
+      if (gameList.length > 0 && gameList[0].serviceItems?.length > 0) {
+        form.serviceItemId = gameList[0].serviceItems[0].id
+        form.gameId = gameList[0].id
+      }
+    } catch (e) {}
+  }
 }
 
+// 第二位陪玩选择
+const selectSecond = (p: any) => {
+  tempSecondId.value = p.id
+}
+const confirmSecond = () => {
+  if (!tempSecondId.value) { showToast('请选择第二位陪玩'); return }
+  const p = providers.value.find(x => x.id === tempSecondId.value)
+  if (!p) return
+  if (!p._price || p._price <= 0) { showToast('该陪玩未设置此游戏价格'); return }
+  secondProvider.value = p
+  secondProviderPrice.value = p._price
+  showSecondPicker.value = false
+}
+const openSecondPicker = () => {
+  tempSecondId.value = secondProvider.value?.id || 0
+  showSecondPicker.value = true
+}
+
+// 商品模式陪玩选择
 const toggleProvider = (p: any) => {
   const idx = tempSelected.value.indexOf(p.id)
   if (idx > -1) {
     tempSelected.value.splice(idx, 1)
   } else {
-    if (tempSelected.value.length >= 2) {
-      showToast('最多选择2位陪玩')
-      return
-    }
+    if (tempSelected.value.length >= 2) { showToast('最多选择2位陪玩'); return }
     tempSelected.value.push(p.id)
   }
 }
-
 const confirmProviders = () => {
-  if (tempSelected.value.length === 0) {
-    showToast('请至少选择1位陪玩')
-    return
-  }
+  if (tempSelected.value.length === 0) { showToast('请至少选择1位陪玩'); return }
   selectedProviders.value = providers.value.filter(p => tempSelected.value.includes(p.id))
   assignMode.value = '指定'
   showProviderPicker.value = false
 }
-
 const removeProvider = (p: any) => {
   selectedProviders.value = selectedProviders.value.filter(x => x.id !== p.id)
-  if (selectedProviders.value.length === 0) {
-    assignMode.value = 'none'
-  }
+  if (selectedProviders.value.length === 0) assignMode.value = 'none'
 }
-
 const openProviderPicker = () => {
   tempSelected.value = selectedProviders.value.map(p => p.id)
   showProviderPicker.value = true
@@ -198,7 +305,10 @@ const onContactConfirm = ({ selectedOptions }: any) => {
 
 const handleSubmit = async () => {
   if (!form.contactValue) { showToast('请输入联系方式'); return }
-  if (!form.serviceItemId) { showToast('服务项目加载中，请稍后'); return }
+  if (fromProvider && playMode.value === 'double' && !secondProvider.value) {
+    showToast('请选择第二位陪玩'); return
+  }
+  if (!fromProvider && !form.serviceItemId) { showToast('服务项目加载中，请稍后'); return }
 
   const wallet: any = await getWallet()
   if (wallet.balance < totalAmount.value) {
@@ -213,32 +323,65 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    if (selectedProviders.value.length === 0) {
-      // 不指定陪玩：进入抢单池
-      const res: any = await createOrder({
-        ...form,
-        title: productName || '陪玩订单',
-        overridePrice: productPrice || undefined,
-        productName,
-      })
-      showToast('下单成功，等待陪玩接单')
-      router.replace(`/order/${res.id}`)
-    } else {
-      // 指定1-2个陪玩：为每个陪玩创建订单
-      let firstOrderId = 0
-      for (let i = 0; i < selectedProviders.value.length; i++) {
-        const p = selectedProviders.value[i]
+    if (fromProvider) {
+      // 陪玩模式
+      if (playMode.value === 'single') {
         const res: any = await createOrder({
           ...form,
-          providerId: p.id,
+          providerId,
+          title: `${gameName}陪玩`,
+          overridePrice: providerPrice,
+          productName: gameName,
+        })
+        showToast('下单成功')
+        router.replace(`/order/${res.id}`)
+      } else {
+        // 双陪：创建两个订单
+        const orders = [
+          { providerId, price: providerPrice },
+          { providerId: secondProvider.value.id, price: secondProviderPrice.value },
+        ]
+        let firstId = 0
+        for (let i = 0; i < orders.length; i++) {
+          const res: any = await createOrder({
+            ...form,
+            providerId: orders[i].providerId,
+            title: `${gameName}双陪`,
+            overridePrice: orders[i].price,
+            productName: gameName,
+          })
+          if (i === 0) firstId = res.id
+        }
+        showToast('双陪下单成功')
+        router.replace(`/order/${firstId}`)
+      }
+    } else {
+      // 商品模式
+      if (selectedProviders.value.length === 0) {
+        const res: any = await createOrder({
+          ...form,
           title: productName || '陪玩订单',
           overridePrice: productPrice || undefined,
           productName,
         })
-        if (i === 0) firstOrderId = res.id
+        showToast('下单成功，等待陪玩接单')
+        router.replace(`/order/${res.id}`)
+      } else {
+        let firstOrderId = 0
+        for (let i = 0; i < selectedProviders.value.length; i++) {
+          const p = selectedProviders.value[i]
+          const res: any = await createOrder({
+            ...form,
+            providerId: p.id,
+            title: productName || '陪玩订单',
+            overridePrice: productPrice || undefined,
+            productName,
+          })
+          if (i === 0) firstOrderId = res.id
+        }
+        showToast(`已为${selectedProviders.value.length}位陪玩下单`)
+        router.replace(`/order/${firstOrderId}`)
       }
-      showToast(`已为${selectedProviders.value.length}位陪玩下单`)
-      router.replace(`/order/${firstOrderId}`)
     }
   } catch (e: any) {
     showToast(e?.response?.data?.message || '下单失败')

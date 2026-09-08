@@ -74,6 +74,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { showToast } from 'vant'
 import { getProviderDetail, getWallet } from '@/api'
 
 const route = useRoute()
@@ -94,7 +95,24 @@ const loadData = async () => {
 }
 
 const unitText = (u: string) => ({ hour: '小时', game: '局', package: '段' }[u] || u)
-const goOrder = () => router.push({ path: '/order/create', query: { providerId: route.params.id } })
+const goOrder = () => {
+  const firstService = profile.value.pricedServices?.[0]
+  if (!firstService || firstService.price <= 0) {
+    showToast('该陪玩尚未设置服务价格，请联系客服')
+    return
+  }
+  router.push({
+    path: '/order/create',
+    query: {
+      fromProvider: '1',
+      providerId: route.params.id,
+      providerName: provider.value?.nickname || '',
+      price: firstService.price,
+      gameId: firstService.gameId,
+      gameName: firstService.gameName,
+    },
+  })
+}
 
 onMounted(loadData)
 </script>
