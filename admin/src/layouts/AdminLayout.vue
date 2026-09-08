@@ -59,10 +59,14 @@ const menuList = [
   { path: '/dashboard', title: '数据概览', icon: 'DataAnalysis' },
   { path: '/users', title: '用户管理', icon: 'User' },
   { path: '/provider-apply', title: '陪玩审核', icon: 'Avatar' },
+  { path: '/providers', title: '陪玩管理', icon: 'UserFilled' },
+  { path: '/products', title: '商品管理', icon: 'Goods' },
+  { path: '/activities', title: '活动管理', icon: 'Promotion' },
   { path: '/orders', title: '订单管理', icon: 'Document' },
   { path: '/order-review', title: '报单审核', icon: 'Checked' },
   { path: '/withdraw', title: '提现审核', icon: 'Money' },
   { path: '/games', title: '游戏管理', icon: 'Game' },
+  { path: '/settings', title: '系统设置', icon: 'Setting' },
 ]
 
 const activeMenu = computed(() => route.path)
