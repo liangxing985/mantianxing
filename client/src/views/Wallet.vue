@@ -33,7 +33,7 @@
         </p>
         <van-cell title="客服微信" value="mantianxing_kefu" is-link @click="copyWechat" />
         <p style="text-align: center; font-size: 12px; color: #999; margin-top: 12px;">
-          1元 = 10星石，转账请备注用户名
+          1元 = {{ coinRate }}星石，转账请备注用户名
         </p>
       </div>
     </van-dialog>
@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showToast } from 'vant'
-import { getWallet, getTransactions } from '@/api'
+import { getWallet, getTransactions, getPublicConfig } from '@/api'
 import dayjs from 'dayjs'
 
 const wallet = ref<any>(null)
@@ -52,6 +52,14 @@ const loading = ref(false)
 const finished = ref(false)
 const page = ref(1)
 const showRecharge = ref(false)
+const coinRate = ref(10)
+
+const loadConfig = async () => {
+  try {
+    const res: any = await getPublicConfig()
+    if (res.coinExchangeRate) coinRate.value = res.coinExchangeRate
+  } catch (e) {}
+}
 
 const loadWallet = async () => { wallet.value = await getWallet() }
 
@@ -79,7 +87,7 @@ const typeText = (t: string) => ({
 }[t] || t)
 const formatTime = (t: string) => dayjs(t).format('MM-DD HH:mm')
 
-onMounted(() => { loadWallet(); loadData() })
+onMounted(() => { loadConfig(); loadWallet(); loadData() })
 </script>
 
 <style scoped>
