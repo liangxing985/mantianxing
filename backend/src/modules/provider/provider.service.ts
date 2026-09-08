@@ -150,7 +150,9 @@ export class ProviderService {
       }));
     }
 
-    return { ...provider, pricedServices };
+    // 把 pricedServices 放到 providerProfile 里，前端取的是 detail.providerProfile
+    (provider.providerProfile as any).pricedServices = pricedServices;
+    return provider;
   }
 
   // 更新陪玩资料
