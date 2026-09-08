@@ -14,6 +14,7 @@ import { KookModule } from './modules/kook/kook.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { ProductModule } from './modules/product/product.module';
 import { ActivityModule } from './modules/activity/activity.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ActivityModule } from './modules/activity/activity.module';
     SystemConfigModule,
     ProductModule,
     ActivityModule,
+    UploadModule,
   ],
 })
 export class AppModule {}

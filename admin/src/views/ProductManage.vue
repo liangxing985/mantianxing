@@ -87,7 +87,18 @@
           </el-select>
         </el-form-item>
         <el-form-item label="商品图片">
-          <el-input v-model="form.image" placeholder="图片URL或base64（MVP阶段）" />
+          <el-upload
+            :show-file-list="false"
+            :before-upload="beforeUpload"
+            :http-request="(opts:any)=>handleUpload(opts,'product')"
+            accept="image/*"
+          >
+            <div v-if="form.image" class="upload-preview">
+              <img :src="form.image" style="width:100px;height:100px;object-fit:cover;border-radius:4px;" />
+            </div>
+            <el-button v-else size="small">点击上传</el-button>
+          </el-upload>
+          <div style="color:#909399;font-size:12px;margin-top:4px;">建议尺寸 400x400，不超过5MB</div>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sortOrder" :min="0" />
@@ -107,7 +118,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getProductList, createProduct, updateProduct, deleteProduct, toggleProduct, getGameList } from '@/api'
+import { getProductList, createProduct, updateProduct, deleteProduct, toggleProduct, getGameList, uploadImage } from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -180,6 +191,28 @@ const remove = async (row: any) => {
   await deleteProduct(row.id)
   ElMessage.success('已删除')
   loadList()
+}
+
+const beforeUpload = (file: File) => {
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('图片不能超过5MB')
+    return false
+  }
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('只能上传图片')
+    return false
+  }
+  return true
+}
+
+const handleUpload = async (opts: any, _type: string) => {
+  try {
+    const res: any = await uploadImage(opts.file)
+    form.image = res.url || res.data?.url || ''
+    ElMessage.success('上传成功')
+  } catch (e) {
+    ElMessage.error('上传失败')
+  }
 }
 
 onMounted(() => {

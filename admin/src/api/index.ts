@@ -73,3 +73,12 @@ export const updateProviderRank = (id: number, rank: string) =>
 export const banProvider = (id: number, banned: boolean) =>
   request.put(`/provider/admin/${id}/ban`, { banned })
 export const deleteProvider = (id: number) => request.delete(`/provider/admin/${id}`)
+
+// ==================== 上传 ====================
+export const uploadImage = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/upload/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}

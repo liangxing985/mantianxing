@@ -1,5 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -7,8 +9,13 @@ import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   // 关闭内置 bodyParser，手动配置以放宽上传大小限制（报单图片 base64）
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
+  });
+
+  // 静态文件服务：/uploads/* 指向 uploads 目录
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/uploads/',
   });
 
   // 放宽请求体限制到 20MB
