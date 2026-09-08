@@ -198,7 +198,7 @@ model OrderEvidence {
   orderId     Int
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   type        EvidenceType // 凭证类型：ENTER入队 / END结单 / RESULT战绩 / OTHER其他
-  imageUrl    String   @db.Text // 截图URL（MVP阶段存base64/dataURL）
+  imageUrl    String   @db.MediumText // 截图URL（MVP阶段存base64/dataURL）
   description String?  @db.VarChar(200)
   createdAt   DateTime @default(now())
 
@@ -353,7 +353,7 @@ model Product {
   originalPrice Int?   // 原价（星石，用于划线价）
   gameId      Int?     // 关联游戏（可选）
   category    String   @default("normal") @db.VarChar(30) // 分类：normal普通 / hot热门 / discount折扣
-  image       String?  @db.Text // 商品图片（base64或URL）
+  image       String?  @db.MediumText // 商品图片（base64或URL）
   sortOrder   Int      @default(0) // 排序
   isActive    Boolean  @default(true) // 是否上架
   createdAt   DateTime @default(now())
@@ -369,7 +369,7 @@ model Activity {
   id          Int      @id @default(autoincrement())
   title       String   @db.VarChar(100) // 活动标题
   content     String?  @db.Text // 活动内容/详情
-  image       String?  @db.Text // 活动图片（base64或URL）
+  image       String?  @db.MediumText // 活动图片（base64或URL）
   linkUrl     String?  @db.VarChar(500) // 跳转链接（可选）
   startTime   DateTime? // 开始时间
   endTime     DateTime? // 结束时间
