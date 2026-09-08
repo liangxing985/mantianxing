@@ -1,12 +1,16 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { getPagination, coinToYuan } from '../../common/utils';
+import { getPagination } from '../../common/utils';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: SystemConfigService,
+  ) {}
 
   // 获取钱包信息
   async getWallet(userId: number) {
@@ -15,13 +19,15 @@ export class WalletService {
     });
     if (!wallet) throw new NotFoundException('钱包不存在');
 
+    const coinRate = await this.configService.getNumber('coin_exchange_rate') || 10;
+
     return {
       balance: wallet.balance,
       frozen: wallet.frozen,
       totalIncome: wallet.totalIncome,
       totalRecharge: wallet.totalRecharge,
       totalWithdraw: wallet.totalWithdraw,
-      balanceYuan: coinToYuan(wallet.balance),
+      balanceYuan: wallet.balance / coinRate,
     };
   }
 
@@ -54,15 +60,19 @@ export class WalletService {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new NotFoundException('钱包不存在');
 
-    if (data.amount < 100) {
-      throw new BadRequestException('最低提现100星石（10元）');
+    const minWithdraw = await this.configService.getNumber('min_withdraw') || 100;
+    const withdrawFeeRate = await this.configService.getNumber('withdraw_fee_rate') || 5;
+    const coinRate = await this.configService.getNumber('coin_exchange_rate') || 10;
+
+    if (data.amount < minWithdraw) {
+      throw new BadRequestException(`最低提现${minWithdraw}星石（${(minWithdraw / coinRate).toFixed(1)}元）`);
     }
     if (wallet.balance < data.amount) {
       throw new BadRequestException('余额不足');
     }
 
-    // 手续费5%，最低1星石
-    const fee = Math.max(1, Math.floor(data.amount * 0.05));
+    // 手续费按配置比例，最低1星石
+    const fee = Math.max(1, Math.floor(data.amount * withdrawFeeRate / 100));
     const realAmount = data.amount - fee;
 
     await this.prisma.$transaction(async (tx) => {
@@ -81,7 +91,7 @@ export class WalletService {
           userId,
           amount: data.amount,
           fee,
-          realAmount: coinToYuan(realAmount),
+          realAmount: realAmount / coinRate,
           payMethod: data.payMethod,
           payAccount: data.payAccount,
           payName: data.payName,
