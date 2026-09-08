@@ -81,6 +81,9 @@ export class ProviderService {
               isOnline: true,
               acceptOrder: true,
               rank: true,
+              games: {
+                include: { game: true },
+              },
               services: {
                 where: { isEnabled: true },
                 include: {
@@ -109,6 +112,7 @@ export class ProviderService {
         bio: true,
         providerProfile: {
           include: {
+            games: { include: { game: true } },
             services: {
               where: { isEnabled: true },
               include: { serviceItem: { include: { game: true } } },
@@ -263,6 +267,7 @@ export class ProviderService {
         phone: true,
         providerProfile: {
           include: {
+            games: { include: { game: true } },
             services: {
               include: { serviceItem: { include: { game: true } } },
               orderBy: { id: 'asc' },
@@ -414,5 +419,48 @@ export class ProviderService {
     // 级联删除：providerProfile、services、wallet 等通过 onDelete: Cascade 自动处理
     await this.prisma.user.delete({ where: { id: providerId } });
     return { success: true };
+  }
+
+  // 获取陪玩游戏（通过userId）
+  async getProviderGames(userId: number) {
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { userId },
+      include: { games: { include: { game: true } } },
+    });
+    if (!profile) throw new NotFoundException('陪玩资料不存在');
+    return profile.games.map((pg: any) => pg.game);
+  }
+
+  // 设置陪玩游戏（通过userId）
+  async setProviderGames(userId: number, gameIds: number[]) {
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) throw new NotFoundException('陪玩资料不存在');
+    await this.prisma.providerGame.deleteMany({ where: { providerId: profile.id } });
+    if (gameIds.length > 0) {
+      await this.prisma.providerGame.createMany({
+        data: gameIds.map((gameId) => ({ providerId: profile.id, gameId })),
+      });
+    }
+    return { success: true, count: gameIds.length };
+  }
+
+  // 获取陪玩游戏（通过profileId，管理端用）
+  async getProviderGamesByProfileId(profileId: number) {
+    const games = await this.prisma.providerGame.findMany({
+      where: { providerId: profileId },
+      include: { game: true },
+    });
+    return games.map((pg: any) => pg.game);
+  }
+
+  // 设置陪玩游戏（通过profileId，管理端用）
+  async setProviderGamesByProfileId(profileId: number, gameIds: number[]) {
+    await this.prisma.providerGame.deleteMany({ where: { providerId: profileId } });
+    if (gameIds.length > 0) {
+      await this.prisma.providerGame.createMany({
+        data: gameIds.map((gameId) => ({ providerId: profileId, gameId })),
+      });
+    }
+    return { success: true, count: gameIds.length };
   }
 }

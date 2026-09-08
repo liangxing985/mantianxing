@@ -46,9 +46,10 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="280" fixed="right">
+      <el-table-column label="操作" width="340" fixed="right">
         <template #default="{ row }">
           <el-button size="small" @click="openEdit(row)">编辑</el-button>
+          <el-button size="small" type="primary" @click="openGames(row)">游戏</el-button>
           <el-button size="small" type="warning" @click="openRank(row)">段位</el-button>
           <el-button size="small" :type="row.status==='ACTIVE'?'danger':'success'" @click="toggleBan(row)">
             {{ row.status==='ACTIVE'?'拉黑':'解封' }}
@@ -106,13 +107,29 @@
         <el-button type="primary" @click="saveRank" :loading="saving">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 可接游戏设置弹窗 -->
+    <el-dialog v-model="gamesDialog" title="设置可接游戏" width="450px">
+      <div style="margin-bottom:12px;color:#666;font-size:13px;">
+        陪玩「{{ gamesTarget?.nickname }}」可接的游戏项目，勾选后在老板端和陪玩端同步显示
+      </div>
+      <el-checkbox-group v-model="selectedGameIds" style="display:flex;flex-direction:column;gap:8px;">
+        <el-checkbox v-for="g in allGames" :key="g.id" :value="g.id" :label="g.id">
+          {{ g.name }}
+        </el-checkbox>
+      </el-checkbox-group>
+      <template #footer>
+        <el-button @click="gamesDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveGames" :loading="saving">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getProviderAdminList, adminUpdateProvider, updateProviderRank, banProvider, deleteProvider, getSystemConfig } from '@/api'
+import { getProviderAdminList, adminUpdateProvider, updateProviderRank, banProvider, deleteProvider, getSystemConfig, getProviderGames, setProviderGames, getGameList } from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -143,6 +160,18 @@ const editForm = reactive({ id: null as number | null, nickname: '', phone: '', 
 const rankDialog = ref(false)
 const rankTarget = ref<any>(null)
 const rankValue = ref('')
+
+const gamesDialog = ref(false)
+const gamesTarget = ref<any>(null)
+const allGames = ref<any[]>([])
+const selectedGameIds = ref<number[]>([])
+
+const loadAllGames = async () => {
+  try {
+    const res: any = await getGameList()
+    allGames.value = res.data || res || []
+  } catch (e) {}
+}
 
 const loadList = async () => {
   loading.value = true
@@ -190,6 +219,29 @@ const openRank = (row: any) => {
   rankDialog.value = true
 }
 
+const openGames = async (row: any) => {
+  gamesTarget.value = row
+  selectedGameIds.value = []
+  try {
+    const res: any = await getProviderGames(row.id)
+    const games = res.data || res || []
+    selectedGameIds.value = games.map((g: any) => g.id)
+  } catch (e) {}
+  gamesDialog.value = true
+}
+
+const saveGames = async () => {
+  saving.value = true
+  try {
+    await setProviderGames(gamesTarget.value.id, selectedGameIds.value)
+    ElMessage.success('可接游戏已更新')
+    gamesDialog.value = false
+    loadList()
+  } catch (e: any) {
+    ElMessage.error(e?.response?.data?.message || '保存失败')
+  } finally { saving.value = false }
+}
+
 const saveRank = async () => {
   if (!rankValue.value) { ElMessage.warning('请选择段位'); return }
   saving.value = true
@@ -221,6 +273,7 @@ const remove = async (row: any) => {
 
 onMounted(() => {
   loadRankOptions()
+  loadAllGames()
   loadList()
 })
 </script>

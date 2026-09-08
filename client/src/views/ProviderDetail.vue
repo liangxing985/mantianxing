@@ -13,6 +13,9 @@
             <van-tag v-else type="default">离线</van-tag>
           </div>
           <p class="bio">{{ provider.bio || '这个人很懒，什么都没写' }}</p>
+          <div v-if="profile.games?.length" class="game-tags">
+            <van-tag v-for="g in profile.games" :key="g.id" plain type="primary" size="medium">{{ g.game?.name }}</van-tag>
+          </div>
         </div>
       </div>
     </div>
@@ -98,6 +101,7 @@ onMounted(loadData)
 .info h2 { font-size: 20px; margin-bottom: 6px; }
 .tags { display: flex; gap: 6px; margin-bottom: 8px; }
 .bio { font-size: 13px; opacity: 0.9; }
+.game-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .stats { display: flex; background: #fff; margin: -16px 12px 0; border-radius: 12px; padding: 16px 0; position: relative; z-index: 1; }
 .stat-item { flex: 1; text-align: center; }
 .stat-item .num { font-size: 20px; font-weight: 600; color: #333; }

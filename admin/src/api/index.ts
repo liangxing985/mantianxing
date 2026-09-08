@@ -73,6 +73,9 @@ export const updateProviderRank = (id: number, rank: string) =>
 export const banProvider = (id: number, banned: boolean) =>
   request.put(`/provider/admin/${id}/ban`, { banned })
 export const deleteProvider = (id: number) => request.delete(`/provider/admin/${id}`)
+export const getProviderGames = (id: number) => request.get(`/provider/admin/${id}/games`)
+export const setProviderGames = (id: number, gameIds: number[]) =>
+  request.put(`/provider/admin/${id}/games`, { gameIds })
 
 // ==================== 上传 ====================
 export const uploadImage = (file: File) => {

@@ -73,10 +73,24 @@ model ProviderProfile {
 
   // 关联
   services      ProviderService[]
+  games         ProviderGame[]
 
   @@index([isOnline])
   @@index([acceptOrder])
   @@map("provider_profiles")
+}
+
+// 陪玩游戏关联表（陪玩擅长哪些游戏）
+model ProviderGame {
+  id              Int      @id @default(autoincrement())
+  providerId      Int
+  providerProfile ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  gameId          Int
+  game            Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@unique([providerId, gameId])
+  @@map("provider_games")
 }
 
 // 陪玩服务关联表（陪玩能提供哪些服务及定价）
@@ -110,6 +124,7 @@ model Game {
   updatedAt   DateTime @updatedAt
 
   serviceItems ServiceItem[]
+  providerGames ProviderGame[]
 
   @@map("games")
 }

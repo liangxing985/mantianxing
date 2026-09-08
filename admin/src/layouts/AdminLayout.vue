@@ -1,20 +1,22 @@
 <template>
   <el-container class="admin-layout">
-    <el-aside width="220px" class="sidebar">
+    <el-aside :width="collapsed ? '64px' : '220px'" class="sidebar" :class="{ collapsed }">
       <div class="logo">
-        <span class="logo-text">漫天星电竞</span>
-        <span class="logo-sub">运营管理后台</span>
+        <span class="logo-text">{{ collapsed ? '漫' : '漫天星电竞' }}</span>
+        <span v-if="!collapsed" class="logo-sub">运营管理后台</span>
       </div>
       <el-menu
         :default-active="activeMenu"
         router
+        :collapse="collapsed"
+        :collapse-transition="false"
         background-color="#1a1b2e"
         text-color="#a0a3c4"
         active-text-color="#fff"
       >
         <el-menu-item v-for="item in menuList" :key="item.path" :index="item.path">
           <el-icon><component :is="item.icon" /></el-icon>
-          <span>{{ item.title }}</span>
+          <template #title>{{ item.title }}</template>
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -22,6 +24,10 @@
     <el-container>
       <el-header class="header">
         <div class="header-left">
+          <el-icon class="collapse-btn" @click="collapsed = !collapsed">
+            <Fold v-if="!collapsed" />
+            <Expand v-else />
+          </el-icon>
           <span class="page-title">{{ currentTitle }}</span>
         </div>
         <div class="header-right">
@@ -48,12 +54,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import { Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
+const collapsed = ref(false)
 
 const menuList = [
   { path: '/dashboard', title: '数据概览', icon: 'DataAnalysis' },
@@ -93,6 +101,19 @@ const handleCommand = (command: string) => {
 .sidebar {
   background: #1a1b2e;
   overflow: hidden;
+  transition: width 0.2s;
+}
+.sidebar.collapsed .logo {
+  padding: 0;
+}
+.collapse-btn {
+  font-size: 18px;
+  cursor: pointer;
+  margin-right: 12px;
+  color: #606266;
+}
+.collapse-btn:hover {
+  color: #409eff;
 }
 .logo {
   height: 60px;

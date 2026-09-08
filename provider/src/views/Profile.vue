@@ -17,6 +17,12 @@
         <van-switch :model-value="profile?.acceptOrder" @update:model-value="(v: any) => profile && (profile.acceptOrder = v)" @change="toggleAccept" />
       </div>
     </div>
+    <div v-if="profile?.games?.length" class="game-section">
+      <div class="game-title">可接游戏</div>
+      <div class="game-tags">
+        <van-tag v-for="g in profile.games" :key="g.id" plain type="primary" size="medium">{{ g.game?.name }}</van-tag>
+      </div>
+    </div>
     <van-cell-group inset style="margin-top: 12px;">
       <van-cell title="服务定价" is-link to="/services" icon="gold-coin-o" />
       <van-cell title="我的订单" is-link to="/orders" icon="orders-o" />
@@ -81,4 +87,7 @@ onMounted(loadData)
 .status-bar { background: #fff; margin: -16px 12px 0; border-radius: 12px; padding: 4px 16px; position: relative; z-index: 1; }
 .status-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f5f5f5; }
 .status-item:last-child { border-bottom: none; }
+.game-section { background: #fff; margin: 12px; border-radius: 12px; padding: 16px; }
+.game-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #333; }
+.game-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 </style>

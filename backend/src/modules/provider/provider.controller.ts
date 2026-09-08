@@ -70,6 +70,36 @@ export class ProviderController {
     return this.providerService.adminDelete(Number(id));
   }
 
+  // 获取我的游戏列表（登录态，注意需定义在 :id 之前）
+  @UseGuards(JwtAuthGuard)
+  @Get('my/games')
+  async getMyGames(@CurrentUser() user: any) {
+    return this.providerService.getProviderGames(user.id);
+  }
+
+  // 设置我的游戏（登录态，注意需定义在 :id 之前）
+  @UseGuards(JwtAuthGuard)
+  @Put('my/games')
+  async setMyGames(@CurrentUser() user: any, @Body() body: { gameIds: number[] }) {
+    return this.providerService.setProviderGames(user.id, body.gameIds || []);
+  }
+
+  // 管理端：获取陪玩游戏（注意需定义在 :id 之前）
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.OPERATOR)
+  @Get('admin/:id/games')
+  async getAdminGames(@Param('id') id: number) {
+    return this.providerService.getProviderGamesByProfileId(Number(id));
+  }
+
+  // 管理端：设置陪玩游戏（注意需定义在 :id 之前）
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.OPERATOR)
+  @Put('admin/:id/games')
+  async setAdminGames(@Param('id') id: number, @Body() body: { gameIds: number[] }) {
+    return this.providerService.setProviderGamesByProfileId(Number(id), body.gameIds || []);
+  }
+
   // 陪玩详情（公开）
   @Get(':id')
   async getProviderDetail(@Param('id') id: number) {
