@@ -38,3 +38,12 @@ export const getMessages = (params: any) => request.get('/message/list', { param
 
 // 公开配置
 export const getPublicConfig = () => request.get('/system-config/public/theme')
+
+// 上传图片
+export const uploadImage = (file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/upload/image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}

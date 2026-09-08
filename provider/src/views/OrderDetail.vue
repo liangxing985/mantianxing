@@ -46,9 +46,10 @@
       <div class="report-form">
         <h3>提交报单</h3>
         <p class="tip">请上传服务完成截图（如战绩、时长等），运营审核通过后结算</p>
-        <van-uploader :file-list="fileList" :max-count="6" multiple @after-read="onAfterRead" @delete="onDelete" />
+        <van-uploader :file-list="fileList" :max-count="6" multiple :disabled="uploading" @after-read="onAfterRead" @delete="onDelete" />
+        <p v-if="uploading" style="color: #07c160; font-size: 12px; margin: 8px 0;">图片上传中...</p>
         <van-field v-model="reportForm.comment" type="textarea" label="备注" placeholder="服务说明（选填）" rows="2" />
-        <van-button type="primary" block round style="margin-top: 16px;" @click="submitReportForm">提交审核</van-button>
+        <van-button type="primary" block round style="margin-top: 16px;" :loading="uploading" @click="submitReportForm">提交审核</van-button>
       </div>
     </van-popup>
   </div>
@@ -57,23 +58,36 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { showToast, showSuccessToast } from 'vant'
-import { getOrderDetail, startOrder, submitReport } from '@/api'
+import { getOrderDetail, startOrder, submitReport, uploadImage } from '@/api'
 const route = useRoute()
 const order = ref<any>(null)
 const showReport = ref(false)
-const reportForm = reactive({ images: [] as any[], comment: '' })
+const reportForm = reactive({ images: [] as string[], comment: '' })
 const fileList = ref<any[]>([])
+const uploading = ref(false)
 
-// 上传后手动收集图片数据（不依赖 v-model，更稳定）
-const onAfterRead = (item: any) => {
-  const data = item.content || (item.file ? URL.createObjectURL(item.file) : '')
-  if (data && reportForm.images.indexOf(data) === -1) {
-    reportForm.images.push(data)
-    fileList.value.push({ url: data })
+// 上传后先传到服务器，拿到URL再收集
+const onAfterRead = async (item: any) => {
+  const files = Array.isArray(item) ? item : [item]
+  for (const f of files) {
+    if (!f.file) continue
+    uploading.value = true
+    try {
+      const res: any = await uploadImage(f.file)
+      const url = res.url || res.data?.url || ''
+      if (url && !reportForm.images.includes(url)) {
+        reportForm.images.push(url)
+        fileList.value.push({ url })
+      }
+    } catch (e) {
+      showToast('图片上传失败，请重试')
+    } finally {
+      uploading.value = false
+    }
   }
 }
 const onDelete = (item: any) => {
-  const idx = fileList.value.indexOf(item)
+  const idx = fileList.value.findIndex((x: any) => x.url === item.url)
   if (idx > -1) {
     fileList.value.splice(idx, 1)
     reportForm.images.splice(idx, 1)
