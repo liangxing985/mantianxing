@@ -46,7 +46,17 @@
       <div class="report-form">
         <h3>提交报单</h3>
         <p class="tip">请上传服务完成截图（如战绩、时长等），运营审核通过后结算</p>
-        <van-uploader :file-list="fileList" :max-count="6" multiple :disabled="uploading" @after-read="onAfterRead" @delete="onDelete" />
+        <div class="upload-area">
+          <div v-for="(img, i) in fileList" :key="i" class="upload-item">
+            <img :src="img.url" class="upload-img" />
+            <span class="upload-del" @click="onDelete(i)">×</span>
+          </div>
+          <div v-if="fileList.length < 6 && !uploading" class="upload-add" @click="triggerFileInput">
+            <van-icon name="photograph" size="24" color="#999" />
+            <span style="font-size: 12px; color: #999;">上传截图</span>
+          </div>
+          <input ref="fileInputRef" type="file" accept="image/*" multiple style="display:none" @change="onFileChange" />
+        </div>
         <p v-if="uploading" style="color: #07c160; font-size: 12px; margin: 8px 0;">图片上传中...</p>
         <van-field v-model="reportForm.comment" type="textarea" label="备注" placeholder="服务说明（选填）" rows="2" />
         <van-button type="primary" block round style="margin-top: 16px;" :loading="uploading" @click="submitReportForm">提交审核</van-button>
@@ -65,33 +75,47 @@ const showReport = ref(false)
 const reportForm = reactive({ images: [] as string[], comment: '' })
 const fileList = ref<any[]>([])
 const uploading = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
-// 上传后先传到服务器，拿到URL再收集
-const onAfterRead = async (item: any) => {
-  const files = Array.isArray(item) ? item : [item]
-  for (const f of files) {
-    if (!f.file) continue
-    uploading.value = true
-    try {
-      const res: any = await uploadImage(f.file)
+const triggerFileInput = () => {
+  fileInputRef.value?.click()
+}
+
+const onFileChange = async (e: Event) => {
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (!files || files.length === 0) return
+  if (fileList.value.length + files.length > 6) {
+    showToast('最多上传6张截图')
+    input.value = ''
+    return
+  }
+  uploading.value = true
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('图片不能超过5MB')
+        continue
+      }
+      const res: any = await uploadImage(file)
       const url = res.url || res.data?.url || ''
-      if (url && !reportForm.images.includes(url)) {
+      if (url) {
         reportForm.images.push(url)
         fileList.value.push({ url })
       }
-    } catch (e) {
-      showToast('图片上传失败，请重试')
-    } finally {
-      uploading.value = false
     }
+  } catch (err) {
+    showToast('图片上传失败，请重试')
+  } finally {
+    uploading.value = false
+    input.value = ''
   }
 }
-const onDelete = (item: any) => {
-  const idx = fileList.value.findIndex((x: any) => x.url === item.url)
-  if (idx > -1) {
-    fileList.value.splice(idx, 1)
-    reportForm.images.splice(idx, 1)
-  }
+
+const onDelete = (index: number) => {
+  fileList.value.splice(index, 1)
+  reportForm.images.splice(index, 1)
 }
 
 const loadData = async () => { order.value = await getOrderDetail(Number(route.params.id)) }
@@ -129,4 +153,9 @@ onMounted(loadData)
 .report-form { padding: 20px; }
 .report-form h3 { font-size: 18px; margin-bottom: 8px; }
 .tip { font-size: 13px; color: #999; margin-bottom: 16px; }
+.upload-area { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.upload-item { position: relative; width: 80px; height: 80px; }
+.upload-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; }
+.upload-del { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; background: #f5576c; color: #fff; border-radius: 50%; text-align: center; line-height: 18px; font-size: 14px; }
+.upload-add { width: 80px; height: 80px; border: 1px dashed #ddd; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
 </style>

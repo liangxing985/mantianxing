@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { getPagination, coinToYuan } from '../../common/utils';
+import { getPagination } from '../../common/utils';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: SystemConfigService,
+  ) {}
 
   // ==================== 数据概览 ====================
   async getDashboard() {
@@ -204,8 +208,9 @@ export class AdminService {
       throw new BadRequestException('订单状态不正确');
     }
 
-    // 平台抽成20%
-    const platformFee = Math.floor(order.totalAmount * 0.2);
+    // 平台抽成从系统配置读取
+    const feeRate = await this.configService.getNumber('platform_fee_rate') || 20;
+    const platformFee = Math.floor(order.totalAmount * feeRate / 100);
     const providerIncome = order.totalAmount - platformFee;
 
     await this.prisma.$transaction(async (tx) => {
