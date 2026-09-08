@@ -97,6 +97,11 @@ export class AdminController {
     return this.adminService.updateGame(id, body);
   }
 
+  @Delete('game/:id')
+  async deleteGame(@Param('id') id: number) {
+    return this.adminService.deleteGame(id);
+  }
+
   @Post('service-item')
   async createServiceItem(@Body() body: any) {
     return this.adminService.createServiceItem(body);
@@ -105,5 +110,10 @@ export class AdminController {
   @Put('service-item/:id')
   async updateServiceItem(@Param('id') id: number, @Body() body: any) {
     return this.adminService.updateServiceItem(id, body);
+  }
+
+  @Delete('service-item/:id')
+  async deleteServiceItem(@Param('id') id: number) {
+    return this.adminService.deleteServiceItem(id);
   }
 }

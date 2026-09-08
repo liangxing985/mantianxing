@@ -37,9 +37,11 @@ export const reviewWithdraw = (id: number, data: any) =>
 // 游戏管理
 export const createGame = (data: any) => request.post('/admin/game', data)
 export const updateGame = (id: number, data: any) => request.put(`/admin/game/${id}`, data)
+export const deleteGame = (id: number) => request.delete(`/admin/game/${id}`)
 export const createServiceItem = (data: any) => request.post('/admin/service-item', data)
 export const updateServiceItem = (id: number, data: any) =>
   request.put(`/admin/service-item/${id}`, data)
+export const deleteServiceItem = (id: number) => request.delete(`/admin/service-item/${id}`)
 
 // 游戏列表（公开）
 export const getGameList = () => request.get('/game/list')

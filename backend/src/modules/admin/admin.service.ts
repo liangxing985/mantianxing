@@ -475,4 +475,12 @@ export class AdminService {
   async updateServiceItem(itemId: number, data: any) {
     return this.prisma.serviceItem.update({ where: { id: itemId }, data });
   }
+
+  async deleteGame(gameId: number) {
+    return this.prisma.game.delete({ where: { id: gameId } });
+  }
+
+  async deleteServiceItem(itemId: number) {
+    return this.prisma.serviceItem.delete({ where: { id: itemId } });
+  }
 }

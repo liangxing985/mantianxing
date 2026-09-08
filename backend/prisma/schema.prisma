@@ -118,6 +118,7 @@ model Game {
   id          Int      @id @default(autoincrement())
   name        String   @unique @db.VarChar(50) // 游戏名称：王者荣耀、和平精英、三角洲行动等
   icon        String?  @db.VarChar(255) // 游戏图标
+  category    String?  @db.VarChar(50) // 游戏分类
   sortOrder   Int      @default(0) // 排序
   isEnabled   Boolean  @default(true)
   createdAt   DateTime @default(now())

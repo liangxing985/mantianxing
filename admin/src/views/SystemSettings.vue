@@ -74,6 +74,47 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card class="config-card" shadow="never" style="margin-top:16px;">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">计价单位管理</span>
+          <el-button size="small" type="primary" @click="addUnit">添加单位</el-button>
+        </div>
+      </template>
+      <el-form label-width="160px">
+        <el-form-item label="单位列表">
+          <div style="width:100%;">
+            <div v-for="(unit, idx) in unitOptions" :key="idx" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+              <el-input v-model="unitOptions[idx].label" placeholder="显示名称，如：按小时" style="flex:1;" />
+              <el-input v-model="unitOptions[idx].value" placeholder="值，如：hour" style="width:140px;" />
+              <el-button size="small" type="danger" @click="removeUnit(idx)" :disabled="unitOptions.length<=1">删除</el-button>
+            </div>
+            <div style="color:#909399;font-size:12px;">计价单位用于服务项目和订单，值为英文标识，名称为显示文字</div>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="config-card" shadow="never" style="margin-top:16px;">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">游戏分类管理</span>
+          <el-button size="small" type="primary" @click="addCategory">添加分类</el-button>
+        </div>
+      </template>
+      <el-form label-width="160px">
+        <el-form-item label="分类列表">
+          <div style="width:100%;">
+            <div v-for="(cat, idx) in categoryOptions" :key="idx" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+              <el-input v-model="categoryOptions[idx]" placeholder="分类名称，如：MOBA竞技" style="flex:1;" />
+              <el-button size="small" type="danger" @click="removeCategory(idx)" :disabled="categoryOptions.length<=1">删除</el-button>
+            </div>
+            <div style="color:#909399;font-size:12px;">游戏分类用于在游戏管理中对游戏进行归类</div>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -90,13 +131,19 @@ const withdrawFee = ref(5)
 const orderExpire = ref(2)
 const theme = reactive({ primaryColor: '#1a1a2e', accentColor: '#e94560', bgColor: '#0f0f1a' })
 const rankOptions = ref<string[]>(['王者', '星耀', '钻石', '铂金', '黄金', '白银', '青铜'])
+const unitOptions = ref<{label: string, value: string}[]>([
+  { label: '按小时', value: 'hour' },
+  { label: '按局', value: 'game' },
+  { label: '包段', value: 'package' },
+])
+const categoryOptions = ref<string[]>(['MOBA竞技', '射击游戏', '手游', '休闲娱乐'])
 
-const addRank = () => {
-  rankOptions.value.push('')
-}
-const removeRank = (idx: number) => {
-  rankOptions.value.splice(idx, 1)
-}
+const addRank = () => { rankOptions.value.push('') }
+const removeRank = (idx: number) => { rankOptions.value.splice(idx, 1) }
+const addUnit = () => { unitOptions.value.push({ label: '', value: '' }) }
+const removeUnit = (idx: number) => { unitOptions.value.splice(idx, 1) }
+const addCategory = () => { categoryOptions.value.push('') }
+const removeCategory = (idx: number) => { categoryOptions.value.splice(idx, 1) }
 
 const loadConfig = async () => {
   const res: any = await getSystemConfig()
@@ -120,6 +167,22 @@ const loadConfig = async () => {
       }
     } catch {}
   }
+  if (data.unit_options) {
+    try {
+      const arr = JSON.parse(data.unit_options)
+      if (Array.isArray(arr) && arr.length > 0) {
+        unitOptions.value = arr.filter((u: any) => u && u.label && u.value)
+      }
+    } catch {}
+  }
+  if (data.game_categories) {
+    try {
+      const arr = JSON.parse(data.game_categories)
+      if (Array.isArray(arr) && arr.length > 0) {
+        categoryOptions.value = arr.filter((c: string) => c && c.trim())
+      }
+    } catch {}
+  }
 }
 
 const saveConfig = async () => {
@@ -133,6 +196,8 @@ const saveConfig = async () => {
       { key: 'order_expire_hours', value: String(orderExpire.value) },
       { key: 'client_theme', value: JSON.stringify(theme) },
       { key: 'rank_options', value: JSON.stringify(rankOptions.value.filter(r => r && r.trim())) },
+      { key: 'unit_options', value: JSON.stringify(unitOptions.value.filter(u => u && u.label && u.value)) },
+      { key: 'game_categories', value: JSON.stringify(categoryOptions.value.filter(c => c && c.trim())) },
     ]
     await updateSystemConfig(items)
     ElMessage.success('设置已保存')
