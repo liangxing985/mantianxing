@@ -43,7 +43,7 @@
     <!-- 商品模式：陪玩选择 -->
     <van-cell-group inset v-if="!fromProvider" title="选择陪玩" style="margin-top: 12px;">
       <van-cell
-        title="暂不选择（店内陪玩都可接单）"
+        title="暂不选择"
         :value="assignMode === 'none' ? '已选' : ''"
         is-link
         @click="assignMode = 'none'; selectedProviders = []"
@@ -53,7 +53,7 @@
         </template>
       </van-cell>
       <van-cell
-        title="指定陪玩（可选择1-2人）"
+        title="指定陪玩（可指定自己喜欢的1-2名陪陪）"
         :value="selectedProviders.length > 0 ? selectedProviders.length + '人' : ''"
         is-link
         @click="openProviderPicker"
