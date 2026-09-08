@@ -46,7 +46,7 @@
       <div class="report-form">
         <h3>提交报单</h3>
         <p class="tip">请上传服务完成截图（如战绩、时长等），运营审核通过后结算</p>
-        <van-uploader v-model="reportForm.images" :max-count="6" multiple />
+        <van-uploader :file-list="fileList" :max-count="6" multiple @after-read="onAfterRead" @delete="onDelete" />
         <van-field v-model="reportForm.comment" type="textarea" label="备注" placeholder="服务说明（选填）" rows="2" />
         <van-button type="primary" block round style="margin-top: 16px;" @click="submitReportForm">提交审核</van-button>
       </div>
@@ -62,6 +62,23 @@ const route = useRoute()
 const order = ref<any>(null)
 const showReport = ref(false)
 const reportForm = reactive({ images: [] as any[], comment: '' })
+const fileList = ref<any[]>([])
+
+// 上传后手动收集图片数据（不依赖 v-model，更稳定）
+const onAfterRead = (item: any) => {
+  const data = item.content || (item.file ? URL.createObjectURL(item.file) : '')
+  if (data && reportForm.images.indexOf(data) === -1) {
+    reportForm.images.push(data)
+    fileList.value.push({ url: data })
+  }
+}
+const onDelete = (item: any) => {
+  const idx = fileList.value.indexOf(item)
+  if (idx > -1) {
+    fileList.value.splice(idx, 1)
+    reportForm.images.splice(idx, 1)
+  }
+}
 
 const loadData = async () => { order.value = await getOrderDetail(Number(route.params.id)) }
 
@@ -73,9 +90,7 @@ const handleStart = async () => {
 
 const submitReportForm = async () => {
   if (reportForm.images.length === 0) { showToast('请至少上传一张截图'); return }
-  // 一期：图片用base64或URL，实际项目应上传到OSS
-  const imageUrls = reportForm.images.map((img: any) => img.content || img.url)
-  await submitReport(order.value.id, { images: imageUrls, comment: reportForm.comment })
+  await submitReport(order.value.id, { images: reportForm.images, comment: reportForm.comment })
   showSuccessToast('报单已提交，等待审核')
   showReport.value = false
   loadData()

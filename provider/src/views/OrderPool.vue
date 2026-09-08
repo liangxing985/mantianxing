@@ -7,7 +7,7 @@
           {{ profile?.isOnline ? '在线接单中' : '已离线' }}
         </van-tag>
       </div>
-      <van-switch :model-value="profile?.isOnline" @change="toggleOnlineStatus" />
+      <van-switch :model-value="profile?.isOnline" @update:model-value="(v: any) => profile && (profile.isOnline = v)" @change="toggleOnlineStatus" />
     </div>
 
     <van-empty v-if="!profile?.isOnline" description="请先开启在线状态才能抢单" />
@@ -54,7 +54,10 @@ const page = ref(1)
 const grabbingId = ref<number | null>(null)
 const profile = ref<any>(null)
 
-const loadProfile = async () => { profile.value = await getMyProfile() }
+const loadProfile = async () => {
+  const res: any = await getMyProfile()
+  profile.value = res?.providerProfile || res || {}
+}
 
 const loadData = async () => {
   loading.value = true
@@ -72,9 +75,15 @@ const loadData = async () => {
 const onRefresh = () => { page.value = 1; list.value = []; finished.value = false; loadData() }
 
 const toggleOnlineStatus = async (val: boolean) => {
-  await toggleOnline(val)
+  if (!profile.value) return
   profile.value.isOnline = val
-  if (val) { page.value = 1; list.value = []; finished.value = false; loadData() }
+  try {
+    await toggleOnline(val)
+    if (val) { page.value = 1; list.value = []; finished.value = false; loadData() }
+  } catch {
+    profile.value.isOnline = !val
+    showToast('操作失败，请重试')
+  }
 }
 
 const handleGrab = async (order: any) => {

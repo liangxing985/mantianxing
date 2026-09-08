@@ -56,8 +56,10 @@ export class OrderController {
 
   // 提交报单
   @Post(':id/report')
-  async submitReport(@CurrentUser() user: any, @Param('id') id: number, @Body() body: { evidences: any[] }) {
-    return this.orderService.submitReport(user.id, id, body.evidences);
+  async submitReport(@CurrentUser() user: any, @Param('id') id: number, @Body() body: any) {
+    // 兼容前端两种字段名：evidences / images
+    const evidences = body.evidences || body.images || [];
+    return this.orderService.submitReport(user.id, id, evidences);
   }
 
   // ==================== 通用 ====================

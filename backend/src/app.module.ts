@@ -11,6 +11,9 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { MessageModule } from './modules/message/message.module';
 import { KookModule } from './modules/kook/kook.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { ProductModule } from './modules/product/product.module';
+import { ActivityModule } from './modules/activity/activity.module';
 
 @Module({
   imports: [
@@ -29,6 +32,9 @@ import { KookModule } from './modules/kook/kook.module';
     AdminModule,
     MessageModule,
     KookModule,
+    SystemConfigModule,
+    ProductModule,
+    ActivityModule,
   ],
 })
 export class AppModule {}

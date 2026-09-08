@@ -29,3 +29,12 @@ export const createWithdraw = (data: any) => request.post('/wallet/withdraw', da
 // 消息
 export const getMessages = (params: any) => request.get('/message/list', { params })
 export const readMessage = (id: number) => request.put(`/message/${id}/read`)
+
+// 公开配置（主题、抽成、汇率）
+export const getPublicConfig = () => request.get('/system-config/public/theme')
+
+// 商品（公开）
+export const getProductList = () => request.get('/product/public/list')
+
+// 活动（公开）
+export const getActivityList = () => request.get('/activity/public/list')

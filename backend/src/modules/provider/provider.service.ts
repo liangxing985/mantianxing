@@ -308,4 +308,109 @@ export class ProviderService {
     });
     return { success: true, isEnabled };
   }
+
+  // ==================== 管理端操作 ====================
+
+  // 管理端：陪玩列表（含所有状态）
+  async getAdminList(query: any) {
+    const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
+    const where: any = { role: 'PROVIDER' };
+    if (query.keyword) where.nickname = { contains: query.keyword };
+    if (query.status) where.status = query.status;
+
+    const [list, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { id: 'desc' },
+        select: {
+          id: true,
+          username: true,
+          nickname: true,
+          avatar: true,
+          phone: true,
+          status: true,
+          createdAt: true,
+          providerProfile: {
+            select: {
+              id: true,
+              level: true,
+              rating: true,
+              orderCount: true,
+              totalIncome: true,
+              isOnline: true,
+              acceptOrder: true,
+              rank: true,
+              applyStatus: true,
+            },
+          },
+        },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return { list, total, page, pageSize };
+  }
+
+  // 管理端：编辑陪玩资料（含段位）
+  async adminUpdate(providerId: number, data: any) {
+    const user = await this.prisma.user.findUnique({ where: { id: providerId, role: 'PROVIDER' } });
+    if (!user) throw new NotFoundException('陪玩不存在');
+
+    const { nickname, avatar, bio, gender, phone, rank, level, ...rest } = data;
+
+    // 更新用户表
+    const userData: any = {};
+    if (nickname !== undefined) userData.nickname = nickname;
+    if (avatar !== undefined) userData.avatar = avatar;
+    if (bio !== undefined) userData.bio = bio;
+    if (gender !== undefined) userData.gender = gender;
+    if (phone !== undefined) userData.phone = phone;
+    if (Object.keys(userData).length > 0) {
+      await this.prisma.user.update({ where: { id: providerId }, data: userData });
+    }
+
+    // 更新陪玩资料表
+    const profileData: any = {};
+    if (rank !== undefined) profileData.rank = rank;
+    if (level !== undefined) profileData.level = level;
+    if (Object.keys(profileData).length > 0) {
+      await this.prisma.providerProfile.update({ where: { userId: providerId }, data: profileData });
+    }
+
+    return { success: true };
+  }
+
+  // 管理端：设置陪玩段位
+  async updateRank(providerId: number, rank: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: providerId, role: 'PROVIDER' } });
+    if (!user) throw new NotFoundException('陪玩不存在');
+    await this.prisma.providerProfile.update({ where: { userId: providerId }, data: { rank } });
+    return { success: true, rank };
+  }
+
+  // 管理端：拉黑/解封
+  async adminBan(providerId: number, banned: boolean) {
+    const user = await this.prisma.user.findUnique({ where: { id: providerId, role: 'PROVIDER' } });
+    if (!user) throw new NotFoundException('陪玩不存在');
+    await this.prisma.user.update({
+      where: { id: providerId },
+      data: { status: banned ? 'DISABLED' : 'ACTIVE' },
+    });
+    // 同时设置陪玩不接单
+    await this.prisma.providerProfile.update({
+      where: { userId: providerId },
+      data: { acceptOrder: !banned, isOnline: false },
+    });
+    return { success: true, banned };
+  }
+
+  // 管理端：删除陪玩
+  async adminDelete(providerId: number) {
+    const user = await this.prisma.user.findUnique({ where: { id: providerId, role: 'PROVIDER' } });
+    if (!user) throw new NotFoundException('陪玩不存在');
+    // 级联删除：providerProfile、services、wallet 等通过 onDelete: Cascade 自动处理
+    await this.prisma.user.delete({ where: { id: providerId } });
+    return { success: true };
+  }
 }

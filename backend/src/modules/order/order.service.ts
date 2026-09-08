@@ -41,9 +41,17 @@ export class OrderService {
     // 如果指定陪玩，获取陪玩该服务的定价
     let unitPrice = serviceItem.defaultPrice;
     if (data.providerId) {
+      // 前端传的是 User.id，需先转为 ProviderProfile.id
+      const providerProfile = await this.prisma.providerProfile.findUnique({
+        where: { userId: data.providerId },
+      });
+      if (!providerProfile) {
+        throw new BadRequestException('该陪玩不存在或未入驻');
+      }
+
       const providerService = await this.prisma.providerService.findFirst({
         where: {
-          providerId: data.providerId,
+          providerId: providerProfile.id,
           serviceItemId: data.serviceItemId,
           isEnabled: true,
         },
@@ -95,9 +103,9 @@ export class OrderService {
           orderNo: generateOrderNo(),
           customerId,
           providerId: data.providerId || null,
-          gameId: data.gameId,
+          gameId: data.gameId ?? serviceItem.gameId,
           serviceItemId: data.serviceItemId,
-          title: data.title,
+          title: data.title || serviceItem.name,
           requirement: data.requirement,
           duration: data.duration,
           unitPrice,
@@ -333,13 +341,13 @@ export class OrderService {
         },
       });
 
-      // 创建凭证记录
+      // 创建凭证记录（兼容：字符串数组=base64图片 / 对象数组={type,imageUrl,description}）
       await tx.orderEvidence.createMany({
-        data: evidences.map((e) => ({
+        data: evidences.map((e: any) => ({
           orderId,
-          type: e.type as any,
-          imageUrl: e.imageUrl,
-          description: e.description,
+          type: typeof e === 'string' ? 'RESULT' : (e.type as any) || 'RESULT',
+          imageUrl: typeof e === 'string' ? e : e.imageUrl,
+          description: typeof e === 'string' ? undefined : e.description,
         })),
       });
     });

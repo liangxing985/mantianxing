@@ -64,6 +64,7 @@ model ProviderProfile {
   isOnline      Boolean  @default(false) // 是否在线
   acceptOrder   Boolean  @default(true) // 是否接单
   onlineStatus  OnlineStatus @default(OFFLINE)
+  rank          String?  @db.VarChar(50) // 游戏段位：王者/星耀/钻石/铂金/黄金/白银/青铜
   applyStatus   ApplyStatus @default(PENDING) // 入驻审核状态
   applyReason   String?  @db.Text // 申请理由
   rejectReason  String?  @db.Text // 拒绝理由
@@ -197,7 +198,7 @@ model OrderEvidence {
   orderId     Int
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   type        EvidenceType // 凭证类型：ENTER入队 / END结单 / RESULT战绩 / OTHER其他
-  imageUrl    String   @db.VarChar(255) // 截图URL
+  imageUrl    String   @db.Text // 截图URL（MVP阶段存base64/dataURL）
   description String?  @db.VarChar(200)
   createdAt   DateTime @default(now())
 
@@ -339,6 +340,46 @@ model SystemConfig {
   updatedAt   DateTime @updatedAt
 
   @@map("system_configs")
+}
+
+// ==================== 商品与活动 ====================
+
+// 商品表（老板端展示的可购买商品/服务套餐）
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100) // 商品名称
+  description String?  @db.Text // 商品描述
+  price       Int      // 价格（星石）
+  originalPrice Int?   // 原价（星石，用于划线价）
+  gameId      Int?     // 关联游戏（可选）
+  category    String   @default("normal") @db.VarChar(30) // 分类：normal普通 / hot热门 / discount折扣
+  image       String?  @db.Text // 商品图片（base64或URL）
+  sortOrder   Int      @default(0) // 排序
+  isActive    Boolean  @default(true) // 是否上架
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@map("products")
+}
+
+// 活动表（老板端展示的活动/Banner）
+model Activity {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(100) // 活动标题
+  content     String?  @db.Text // 活动内容/详情
+  image       String?  @db.Text // 活动图片（base64或URL）
+  linkUrl     String?  @db.VarChar(500) // 跳转链接（可选）
+  startTime   DateTime? // 开始时间
+  endTime     DateTime? // 结束时间
+  sortOrder   Int      @default(0) // 排序
+  isActive    Boolean  @default(true) // 是否发布
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("activities")
 }
 
 // ==================== 枚举定义 ====================

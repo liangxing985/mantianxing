@@ -11,15 +11,15 @@ export class GameController {
     return this.gameService.getGameList();
   }
 
-  // 获取游戏详情
-  @Get(':id')
-  async getGameDetail(@Param('id') id: number) {
-    return this.gameService.getGameDetail(id);
-  }
-
   // 获取服务项目详情
   @Get('service/:id')
   async getServiceItemDetail(@Param('id') id: number) {
     return this.gameService.getServiceItemDetail(id);
+  }
+
+  // 获取游戏详情
+  @Get(':id')
+  async getGameDetail(@Param('id') id: number) {
+    return this.gameService.getGameDetail(id);
   }
 }

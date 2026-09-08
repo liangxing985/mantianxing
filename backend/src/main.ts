@@ -3,9 +3,17 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // 关闭内置 bodyParser，手动配置以放宽上传大小限制（报单图片 base64）
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false,
+  });
+
+  // 放宽请求体限制到 20MB
+  app.use(json({ limit: '20mb' }));
+  app.use(urlencoded({ limit: '20mb', extended: true }));
 
   // 全局前缀
   app.setGlobalPrefix('api');

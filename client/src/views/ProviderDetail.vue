@@ -8,6 +8,7 @@
           <h2>{{ provider.nickname }}</h2>
           <div class="tags">
             <van-tag plain type="warning">Lv.{{ profile.level }}</van-tag>
+            <van-tag v-if="profile.rank" type="danger">{{ profile.rank }}</van-tag>
             <van-tag v-if="profile.isOnline" type="success">在线接单</van-tag>
             <van-tag v-else type="default">离线</van-tag>
           </div>

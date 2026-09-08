@@ -42,3 +42,7 @@ npm-debug.log*
 
 # Prisma
 prisma/migrations/dev.db*
+**/schema.sqlite.prisma
+
+# Release packages
+*.zip

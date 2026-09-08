@@ -30,6 +30,24 @@ const routes = [
         meta: { title: '陪玩审核', icon: 'Avatar' },
       },
       {
+        path: 'providers',
+        name: 'Providers',
+        component: () => import('@/views/ProviderManage.vue'),
+        meta: { title: '陪玩管理', icon: 'UserFilled' },
+      },
+      {
+        path: 'products',
+        name: 'Products',
+        component: () => import('@/views/ProductManage.vue'),
+        meta: { title: '商品管理', icon: 'Goods' },
+      },
+      {
+        path: 'activities',
+        name: 'Activities',
+        component: () => import('@/views/ActivityManage.vue'),
+        meta: { title: '活动管理', icon: 'Promotion' },
+      },
+      {
         path: 'orders',
         name: 'Orders',
         component: () => import('@/views/OrderList.vue'),
@@ -52,6 +70,12 @@ const routes = [
         name: 'Games',
         component: () => import('@/views/GameManage.vue'),
         meta: { title: '游戏管理', icon: 'Game' },
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('@/views/SystemSettings.vue'),
+        meta: { title: '系统设置', icon: 'Setting' },
       },
     ],
   },

@@ -10,11 +10,11 @@
     <div class="status-bar">
       <div class="status-item">
         <span>在线状态</span>
-        <van-switch :model-value="profile?.isOnline" @change="toggleOnlineStatus" />
+        <van-switch :model-value="profile?.isOnline" @update:model-value="(v: any) => profile && (profile.isOnline = v)" @change="toggleOnlineStatus" />
       </div>
       <div class="status-item">
         <span>接单开关</span>
-        <van-switch :model-value="profile?.acceptOrder" @change="toggleAccept" />
+        <van-switch :model-value="profile?.acceptOrder" @update:model-value="(v: any) => profile && (profile.acceptOrder = v)" @change="toggleAccept" />
       </div>
     </div>
     <van-cell-group inset style="margin-top: 12px;">
@@ -51,12 +51,21 @@ const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 const editForm = reactive({ nickname: '', phone: '', bio: '' })
 const loadData = async () => {
   const [u, p]: any = await Promise.all([getProfile(), getMyProfile()])
-  user.value = u; profile.value = p
+  user.value = u
+  profile.value = p?.providerProfile || p || {}
   editForm.nickname = u.nickname; editForm.phone = u.phone || ''; editForm.bio = u.bio || ''
 }
 const saveProfile = async () => { await updateProfile(editForm); showToast('保存成功'); loadData() }
-const toggleOnlineStatus = async (val: boolean) => { await toggleOnline(val); profile.value.isOnline = val }
-const toggleAccept = async (val: boolean) => { await toggleAcceptOrder(val); profile.value.acceptOrder = val }
+const toggleOnlineStatus = async (val: boolean) => {
+  if (!profile.value) return
+  profile.value.isOnline = val
+  try { await toggleOnline(val) } catch { profile.value.isOnline = !val; showToast('操作失败，请重试') }
+}
+const toggleAccept = async (val: boolean) => {
+  if (!profile.value) return
+  profile.value.acceptOrder = val
+  try { await toggleAcceptOrder(val) } catch { profile.value.acceptOrder = !val; showToast('操作失败，请重试') }
+}
 const handleLogout = async () => {
   await showConfirmDialog({ title: '退出登录', message: '确定退出登录吗？' })
   localStorage.removeItem('provider_token'); localStorage.removeItem('provider_user')
