@@ -115,6 +115,27 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card class="config-card" shadow="never" style="margin-top:16px;">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">商品分类管理</span>
+          <el-button size="small" type="primary" @click="addProductCategory">添加分类</el-button>
+        </div>
+      </template>
+      <el-form label-width="160px">
+        <el-form-item label="分类列表">
+          <div style="width:100%;">
+            <div v-for="(cat, idx) in productCategoryOptions" :key="idx" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+              <el-input v-model="productCategoryOptions[idx].label" placeholder="显示名称，如：热门" style="flex:1;" />
+              <el-input v-model="productCategoryOptions[idx].value" placeholder="值，如：hot" style="width:140px;" />
+              <el-button size="small" type="danger" @click="removeProductCategory(idx)" :disabled="productCategoryOptions.length<=1">删除</el-button>
+            </div>
+            <div style="color:#909399;font-size:12px;">商品分类用于商品管理和老板端商品展示</div>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -137,6 +158,11 @@ const unitOptions = ref<{label: string, value: string}[]>([
   { label: '包段', value: 'package' },
 ])
 const categoryOptions = ref<string[]>(['MOBA竞技', '射击游戏', '手游', '休闲娱乐'])
+const productCategoryOptions = ref<{label: string, value: string}[]>([
+  { label: '普通', value: 'normal' },
+  { label: '热门', value: 'hot' },
+  { label: '折扣', value: 'discount' },
+])
 
 const addRank = () => { rankOptions.value.push('') }
 const removeRank = (idx: number) => { rankOptions.value.splice(idx, 1) }
@@ -144,6 +170,8 @@ const addUnit = () => { unitOptions.value.push({ label: '', value: '' }) }
 const removeUnit = (idx: number) => { unitOptions.value.splice(idx, 1) }
 const addCategory = () => { categoryOptions.value.push('') }
 const removeCategory = (idx: number) => { categoryOptions.value.splice(idx, 1) }
+const addProductCategory = () => { productCategoryOptions.value.push({ label: '', value: '' }) }
+const removeProductCategory = (idx: number) => { productCategoryOptions.value.splice(idx, 1) }
 
 const loadConfig = async () => {
   const res: any = await getSystemConfig()
@@ -183,6 +211,14 @@ const loadConfig = async () => {
       }
     } catch {}
   }
+  if (data.product_categories) {
+    try {
+      const arr = JSON.parse(data.product_categories)
+      if (Array.isArray(arr) && arr.length > 0) {
+        productCategoryOptions.value = arr.filter((c: any) => c && c.label && c.value)
+      }
+    } catch {}
+  }
 }
 
 const saveConfig = async () => {
@@ -198,6 +234,7 @@ const saveConfig = async () => {
       { key: 'rank_options', value: JSON.stringify(rankOptions.value.filter(r => r && r.trim())) },
       { key: 'unit_options', value: JSON.stringify(unitOptions.value.filter(u => u && u.label && u.value)) },
       { key: 'game_categories', value: JSON.stringify(categoryOptions.value.filter(c => c && c.trim())) },
+      { key: 'product_categories', value: JSON.stringify(productCategoryOptions.value.filter(c => c && c.label && c.value)) },
     ]
     await updateSystemConfig(items)
     ElMessage.success('设置已保存')

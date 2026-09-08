@@ -5,9 +5,7 @@
       <div>
         <el-input v-model="keyword" placeholder="搜索商品名称" clearable style="width:200px;margin-right:12px;" @clear="loadList" @keyup.enter="loadList" />
         <el-select v-model="category" placeholder="全部分类" clearable style="width:120px;margin-right:12px;" @change="loadList">
-          <el-option label="普通" value="normal" />
-          <el-option label="热门" value="hot" />
-          <el-option label="折扣" value="discount" />
+          <el-option v-for="c in productCategoryOptions" :key="c.value" :label="c.label" :value="c.value" />
         </el-select>
         <el-button type="primary" @click="openDialog()">新增商品</el-button>
       </div>
@@ -36,8 +34,8 @@
       </el-table-column>
       <el-table-column label="分类" width="80">
         <template #default="{ row }">
-          <el-tag :type="row.category==='hot'?'danger':row.category==='discount'?'warning':'info'" size="small">
-            {{ row.category==='hot'?'热门':row.category==='discount'?'折扣':'普通' }}
+          <el-tag :type="categoryTagType(row.category)" size="small">
+            {{ categoryLabel(row.category) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -81,9 +79,7 @@
         </el-form-item>
         <el-form-item label="分类">
           <el-select v-model="form.category" style="width:100%;">
-            <el-option label="普通" value="normal" />
-            <el-option label="热门" value="hot" />
-            <el-option label="折扣" value="discount" />
+            <el-option v-for="c in productCategoryOptions" :key="c.value" :label="c.label" :value="c.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="商品图片">
@@ -118,7 +114,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getProductList, createProduct, updateProduct, deleteProduct, toggleProduct, getGameList, uploadImage } from '@/api'
+import { getProductList, createProduct, updateProduct, deleteProduct, toggleProduct, getGameList, uploadImage, getSystemConfig } from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -130,7 +126,19 @@ const keyword = ref('')
 const category = ref('')
 const dialog = ref(false)
 const games = ref<any[]>([])
+const productCategoryOptions = ref<{label: string, value: string}[]>([
+  { label: '普通', value: 'normal' },
+  { label: '热门', value: 'hot' },
+  { label: '折扣', value: 'discount' },
+])
 const form = reactive({ id: null as number | null, name: '', description: '', price: 0, originalPrice: null as number | null, gameId: null as number | null, category: 'normal', image: '', sortOrder: 0, isActive: true })
+
+const categoryLabel = (val: string) => productCategoryOptions.value.find(c => c.value === val)?.label || val || '普通'
+const categoryTagType = (val: string) => {
+  if (val === 'hot') return 'danger'
+  if (val === 'discount') return 'warning'
+  return 'info'
+}
 
 const getGameName = (gameId: number) => {
   return games.value.find(g => g.id === gameId)?.name || '通用'
@@ -215,9 +223,25 @@ const handleUpload = async (opts: any, _type: string) => {
   }
 }
 
+const loadProductCategories = async () => {
+  try {
+    const res: any = await getSystemConfig()
+    const data = res.data || res
+    if (data.product_categories) {
+      try {
+        const arr = JSON.parse(data.product_categories)
+        if (Array.isArray(arr) && arr.length > 0) {
+          productCategoryOptions.value = arr.filter((c: any) => c && c.label && c.value)
+        }
+      } catch {}
+    }
+  } catch (e) {}
+}
+
 onMounted(() => {
   loadGames()
   loadList()
+  loadProductCategories()
 })
 </script>
 
