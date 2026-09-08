@@ -3,7 +3,7 @@
     <van-tabs v-model:active="activeTab" @change="onTabChange">
       <van-tab title="全部" name="" />
       <van-tab title="待接单" name="PAID" />
-      <van-tab title="进行中" name="SERVING" />
+      <van-tab title="进行中" name="ASSIGNED,SERVING" />
       <van-tab title="待评价" name="COMPLETED" />
     </van-tabs>
 

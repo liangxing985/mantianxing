@@ -367,7 +367,13 @@ export class OrderService {
 
     const where: any =
       user?.role === 'PROVIDER' ? { providerId: userId } : { customerId: userId };
-    if (query.status) where.status = query.status;
+    if (query.status) {
+      if (query.status.includes(',')) {
+        where.status = { in: query.status.split(',') };
+      } else {
+        where.status = query.status;
+      }
+    }
 
     const [list, total] = await Promise.all([
       this.prisma.order.findMany({
