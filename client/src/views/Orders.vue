@@ -50,14 +50,18 @@ const loadData = async () => {
   loading.value = true
   try {
     const res: any = await getMyOrders({ page: page.value, pageSize: 20, status: activeTab.value })
-    let orders = res.list || []
+    const data = res?.data || res || {}
+    let orders = data.list || data.items || []
     // 待评价标签页：过滤掉已评价的订单
     if (activeTab.value === 'COMPLETED') {
       orders = orders.filter((o: any) => !o.customerRating)
     }
     list.value = page.value === 1 ? orders : [...list.value, ...orders]
-    finished.value = list.value.length >= res.total
+    const total = data.total ?? orders.length
+    finished.value = list.value.length >= total || orders.length === 0
     page.value++
+  } catch (e) {
+    finished.value = true
   } finally {
     loading.value = false
   }
