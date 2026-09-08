@@ -80,6 +80,7 @@ export class ProviderService {
               orderCount: true,
               isOnline: true,
               acceptOrder: true,
+              rank: true,
               services: {
                 where: { isEnabled: true },
                 include: {
@@ -330,6 +331,7 @@ export class ProviderService {
           nickname: true,
           avatar: true,
           phone: true,
+          bio: true,
           status: true,
           createdAt: true,
           providerProfile: {

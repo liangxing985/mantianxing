@@ -1,6 +1,11 @@
 <template>
   <div class="order-create">
     <van-nav-bar title="创建订单" left-arrow @click-left="$router.back()" />
+    <!-- 商品信息（从商品卡片跳转时显示） -->
+    <van-cell-group inset v-if="productName" style="margin-top: 12px;">
+      <van-cell title="商品" :value="productName" />
+      <van-cell title="商品价" :value="productPrice + ' 星石'" />
+    </van-cell-group>
     <van-form @submit="handleSubmit">
       <van-cell-group inset title="选择服务">
         <van-field name="serviceItemId" label="服务项目" :model-value="selectedService?.serviceItem?.name" placeholder="请选择" is-link readonly @click="showServicePicker = true" />
@@ -67,13 +72,17 @@ const selectedService = ref<any>(null)
 const showServicePicker = ref(false)
 const showContactPicker = ref(false)
 
+// 商品预填（从商品卡片跳转）
+const productName = route.query.productName as string || ''
+const productPrice = Number(route.query.price) || 0
+
 const form = reactive({
   providerId: Number(route.query.providerId) || 0,
   serviceItemId: 0,
   duration: 1,
   contactType: 'QQ',
   contactValue: '',
-  requirement: '',
+  requirement: productName ? `购买商品：${productName}` : '',
 })
 
 const serviceColumns = computed(() => services.value.map(s => ({ text: `${s.serviceItem?.name} - ${s.price}星石`, value: s })))
@@ -86,6 +95,11 @@ const contactTypeText = computed(() => contactOptions.find(o => o.value === form
 const totalAmount = computed(() => (selectedService.value?.price || 0) * form.duration)
 
 const loadData = async () => {
+  if (!form.providerId) {
+    showToast('请先选择陪玩')
+    setTimeout(() => router.back(), 1500)
+    return
+  }
   const detail: any = await getProviderDetail(form.providerId)
   provider.value = detail
   services.value = detail.providerProfile?.services?.filter((s: any) => s.isEnabled) || []

@@ -97,7 +97,7 @@ const loadData = async () => {
     const [cfg, g, p, prod, act]: any = await Promise.all([
       getPublicConfig().catch(() => ({})),
       getGameList(),
-      getProviderList({ page: 1, pageSize: 10, isOnline: true }),
+      getProviderList({ page: 1, pageSize: 10, online: true }),
       getProductList().catch(() => []),
       getActivityList().catch(() => []),
     ])
