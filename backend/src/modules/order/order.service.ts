@@ -349,6 +349,36 @@ export class OrderService {
 
   // ==================== 通用 ====================
 
+  // 我的订单列表（老板端：作为顾客；陪玩端：作为接单者）
+  async getMyOrders(userId: number, query: any) {
+    const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+
+    const where: any =
+      user?.role === 'PROVIDER' ? { providerId: userId } : { customerId: userId };
+    if (query.status) where.status = query.status;
+
+    const [list, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          serviceItem: { include: { game: true } },
+          customer: { select: { id: true, nickname: true, avatar: true } },
+          provider: { select: { id: true, nickname: true, avatar: true } },
+        },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+
+    return { list, total, page, pageSize };
+  }
+
   // 订单详情
   async getOrderDetail(orderId: number, userId: number) {
     const order = await this.prisma.order.findUnique({

@@ -14,6 +14,12 @@ export class WalletController {
     return this.walletService.getWallet(user.id);
   }
 
+  // 兼容别名：balance（前端历史路径）
+  @Get('balance')
+  async getWalletBalance(@CurrentUser() user: any) {
+    return this.walletService.getWallet(user.id);
+  }
+
   // 流水记录
   @Get('transactions')
   async getTransactions(@CurrentUser() user: any, @Query() query: any) {

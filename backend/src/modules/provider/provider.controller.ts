@@ -13,6 +13,13 @@ export class ProviderController {
     return this.providerService.getProviderList(query);
   }
 
+  // 我的陪玩资料（登录态，注意需定义在 :id 之前）
+  @UseGuards(JwtAuthGuard)
+  @Get('my-profile')
+  async getMyProfile(@CurrentUser() user: any) {
+    return this.providerService.getMyProfile(user.id);
+  }
+
   // 陪玩详情（公开）
   @Get(':id')
   async getProviderDetail(@Param('id') id: number) {
@@ -31,6 +38,20 @@ export class ProviderController {
   @Post('service')
   async setServicePrice(@CurrentUser() user: any, @Body() body: any) {
     return this.providerService.setServicePrice(user.id, body);
+  }
+
+  // 修改单个服务价格（按服务记录ID）
+  @UseGuards(JwtAuthGuard)
+  @Put('service/:id/price')
+  async updateServicePrice(@CurrentUser() user: any, @Param('id') id: number, @Body() body: { price: number }) {
+    return this.providerService.updateServicePrice(user.id, id, body.price);
+  }
+
+  // 切换服务启用状态（按服务记录ID）
+  @UseGuards(JwtAuthGuard)
+  @Put('service/:id/toggle')
+  async toggleService(@CurrentUser() user: any, @Param('id') id: number, @Body() body: { isEnabled: boolean }) {
+    return this.providerService.toggleService(user.id, id, body.isEnabled);
   }
 
   // 获取我的服务列表

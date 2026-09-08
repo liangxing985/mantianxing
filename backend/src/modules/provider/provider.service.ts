@@ -247,4 +247,65 @@ export class ProviderService {
     });
     return profile?.services || [];
   }
+
+  // 我的陪玩资料（登录态）
+  async getMyProfile(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        nickname: true,
+        avatar: true,
+        gender: true,
+        bio: true,
+        phone: true,
+        providerProfile: {
+          include: {
+            services: {
+              include: { serviceItem: { include: { game: true } } },
+              orderBy: { id: 'asc' },
+            },
+          },
+        },
+      },
+    });
+    if (!user?.providerProfile) throw new NotFoundException('陪玩资料不存在');
+    return user;
+  }
+
+  // 修改单个服务价格（按服务记录ID）
+  async updateServicePrice(userId: number, serviceId: number, price: number) {
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) throw new NotFoundException('陪玩资料不存在');
+    if (price <= 0) throw new BadRequestException('价格必须大于0');
+
+    const service = await this.prisma.providerService.findFirst({
+      where: { id: serviceId, providerId: profile.id },
+    });
+    if (!service) throw new NotFoundException('服务不存在');
+
+    await this.prisma.providerService.update({
+      where: { id: serviceId },
+      data: { price },
+    });
+    return { success: true };
+  }
+
+  // 切换服务启用状态（按服务记录ID）
+  async toggleService(userId: number, serviceId: number, isEnabled: boolean) {
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) throw new NotFoundException('陪玩资料不存在');
+
+    const service = await this.prisma.providerService.findFirst({
+      where: { id: serviceId, providerId: profile.id },
+    });
+    if (!service) throw new NotFoundException('服务不存在');
+
+    await this.prisma.providerService.update({
+      where: { id: serviceId },
+      data: { isEnabled },
+    });
+    return { success: true, isEnabled };
+  }
 }

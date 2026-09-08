@@ -36,6 +36,12 @@ export class OrderController {
     return this.orderService.getOrderPool(query);
   }
 
+  // 我的订单列表（老板/陪玩通用，注意需定义在 :id 之前）
+  @Get('my')
+  async getMyOrders(@CurrentUser() user: any, @Query() query: any) {
+    return this.orderService.getMyOrders(user.id, query);
+  }
+
   // 抢单
   @Post(':id/grab')
   async grabOrder(@CurrentUser() user: any, @Param('id') id: number) {
