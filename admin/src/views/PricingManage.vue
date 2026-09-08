@@ -53,10 +53,9 @@ const loadData = async () => {
     // 获取段位配置
     try {
       const configRes: any = await getSystemConfig()
-      const configs = configRes.data || configRes || []
-      const rankConfig = configs.find((c: any) => c.configKey === 'rank_options')
-      if (rankConfig?.configValue) {
-        rankOptions.value = JSON.parse(rankConfig.configValue)
+      const configs = configRes.data || configRes || {}
+      if (configs.rank_options) {
+        rankOptions.value = JSON.parse(configs.rank_options)
       }
     } catch (e) {}
 
