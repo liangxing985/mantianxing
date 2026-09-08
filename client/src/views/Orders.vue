@@ -25,7 +25,7 @@
           <span class="time">{{ formatTime(order.createdAt) }}</span>
           <div class="actions">
             <van-button v-if="order.status === 'PAID'" size="small" plain type="danger" @click.stop="cancelOrder(order)">取消订单</van-button>
-            <van-button v-if="order.status === 'COMPLETED' && !order.review" size="small" type="primary" @click.stop="goReview(order)">去评价</van-button>
+            <van-button v-if="order.status === 'COMPLETED' && !order.customerRating" size="small" type="primary" @click.stop="goReview(order)">去评价</van-button>
           </div>
         </div>
       </div>
@@ -50,7 +50,12 @@ const loadData = async () => {
   loading.value = true
   try {
     const res: any = await getMyOrders({ page: page.value, pageSize: 20, status: activeTab.value })
-    list.value = page.value === 1 ? res.list : [...list.value, ...res.list]
+    let orders = res.list || []
+    // 待评价标签页：过滤掉已评价的订单
+    if (activeTab.value === 'COMPLETED') {
+      orders = orders.filter((o: any) => !o.customerRating)
+    }
+    list.value = page.value === 1 ? orders : [...list.value, ...orders]
     finished.value = list.value.length >= res.total
     page.value++
   } finally {
