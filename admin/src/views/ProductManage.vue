@@ -22,6 +22,11 @@
         </template>
       </el-table-column>
       <el-table-column prop="name" label="商品名称" min-width="150" />
+      <el-table-column label="所属游戏" width="100">
+        <template #default="{ row }">
+          {{ getGameName(row.gameId) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="description" label="描述" min-width="150" show-overflow-tooltip />
       <el-table-column label="价格" width="120">
         <template #default="{ row }">
@@ -69,6 +74,11 @@
         <el-form-item label="原价(星石)">
           <el-input-number v-model="form.originalPrice" :min="0" />
         </el-form-item>
+        <el-form-item label="所属游戏">
+          <el-select v-model="form.gameId" placeholder="请选择游戏" clearable style="width:100%;">
+            <el-option v-for="g in games" :key="g.id" :label="g.name" :value="g.id" />
+          </el-select>
+        </el-form-item>
         <el-form-item label="分类">
           <el-select v-model="form.category" style="width:100%;">
             <el-option label="普通" value="normal" />
@@ -97,7 +107,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getProductList, createProduct, updateProduct, deleteProduct, toggleProduct } from '@/api'
+import { getProductList, createProduct, updateProduct, deleteProduct, toggleProduct, getGameList } from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -108,7 +118,21 @@ const pageSize = ref(20)
 const keyword = ref('')
 const category = ref('')
 const dialog = ref(false)
-const form = reactive({ id: null as number | null, name: '', description: '', price: 0, originalPrice: null as number | null, category: 'normal', image: '', sortOrder: 0, isActive: true })
+const games = ref<any[]>([])
+const form = reactive({ id: null as number | null, name: '', description: '', price: 0, originalPrice: null as number | null, gameId: null as number | null, category: 'normal', image: '', sortOrder: 0, isActive: true })
+
+const getGameName = (gameId: number) => {
+  return games.value.find(g => g.id === gameId)?.name || '通用'
+}
+
+const loadGames = async () => {
+  try {
+    const res: any = await getGameList()
+    games.value = res.data || res || []
+  } catch (e) {
+    games.value = []
+  }
+}
 
 const loadList = async () => {
   loading.value = true
@@ -124,7 +148,7 @@ const openDialog = (row?: any) => {
   if (row) {
     Object.assign(form, row)
   } else {
-    Object.assign(form, { id: null, name: '', description: '', price: 0, originalPrice: null, category: 'normal', image: '', sortOrder: 0, isActive: true })
+    Object.assign(form, { id: null, name: '', description: '', price: 0, originalPrice: null, gameId: null, category: 'normal', image: '', sortOrder: 0, isActive: true })
   }
   dialog.value = true
 }
@@ -158,7 +182,10 @@ const remove = async (row: any) => {
   loadList()
 }
 
-onMounted(loadList)
+onMounted(() => {
+  loadGames()
+  loadList()
+})
 </script>
 
 <style scoped>
