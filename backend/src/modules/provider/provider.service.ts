@@ -446,10 +446,13 @@ export class ProviderService {
 
   // 获取陪玩游戏（通过userId，管理端用）
   async getProviderGamesByProfileId(userId: number) {
-    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
-    if (!profile) return [];
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { providerProfile: true },
+    });
+    if (!user?.providerProfile) return [];
     const games = await this.prisma.providerGame.findMany({
-      where: { providerId: profile.id },
+      where: { providerId: user.providerProfile.id },
       include: { game: true },
     });
     return games.map((pg: any) => pg.game);
@@ -457,12 +460,16 @@ export class ProviderService {
 
   // 设置陪玩游戏（通过userId，管理端用）
   async setProviderGamesByProfileId(userId: number, gameIds: number[]) {
-    const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
-    if (!profile) throw new Error('陪玩资料不存在');
-    await this.prisma.providerGame.deleteMany({ where: { providerId: profile.id } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { providerProfile: true },
+    });
+    if (!user?.providerProfile) throw new Error('陪玩资料不存在');
+    const profileId = user.providerProfile.id;
+    await this.prisma.providerGame.deleteMany({ where: { providerId: profileId } });
     if (gameIds.length > 0) {
       await this.prisma.providerGame.createMany({
-        data: gameIds.map((gameId) => ({ providerId: profile.id, gameId })),
+        data: gameIds.map((gameId) => ({ providerId: profileId, gameId })),
       });
     }
     return { success: true, count: gameIds.length };
