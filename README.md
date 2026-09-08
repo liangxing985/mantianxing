@@ -174,4 +174,5 @@ npm run build && npm run start:prod
 
 ## License
 
-MIT
+正在开发中..... 
+暂不对外开放
