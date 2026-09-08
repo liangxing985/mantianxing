@@ -9,13 +9,16 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class SystemConfigController {
   constructor(private readonly configService: SystemConfigService) {}
 
-  // 公开接口：获取老板端主题配置
+  // 公开接口：获取公开配置（主题+财务参数）
   @Get('public/theme')
   async getPublicTheme() {
     const theme = await this.configService.getJSON('client_theme');
     const feeRate = await this.configService.getNumber('platform_fee_rate');
     const coinRate = await this.configService.getNumber('coin_exchange_rate');
-    return { theme, platformFeeRate: feeRate, coinExchangeRate: coinRate };
+    const minWithdraw = await this.configService.getNumber('min_withdraw');
+    const withdrawFeeRate = await this.configService.getNumber('withdraw_fee_rate');
+    const orderExpireHours = await this.configService.getNumber('order_expire_hours');
+    return { theme, platformFeeRate: feeRate, coinExchangeRate: coinRate, minWithdraw, withdrawFeeRate, orderExpireHours };
   }
 
   // 管理端：获取所有配置

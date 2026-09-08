@@ -35,3 +35,6 @@ export const createWithdraw = (data: any) => request.post('/wallet/withdraw', da
 
 // 消息
 export const getMessages = (params: any) => request.get('/message/list', { params })
+
+// 公开配置
+export const getPublicConfig = () => request.get('/system-config/public/theme')

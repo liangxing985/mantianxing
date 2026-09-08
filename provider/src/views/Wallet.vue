@@ -26,7 +26,7 @@
     <van-popup v-model:show="showWithdraw" position="bottom" round>
       <div class="withdraw-form">
         <h3>申请提现</h3>
-        <p class="tip">最低提现100星石（10元），手续费5%</p>
+        <p class="tip">最低提现{{ minWithdraw }}星石（{{ (minWithdraw / coinRate).toFixed(1) }}元），手续费{{ withdrawFeeRate }}%</p>
         <van-field v-model="withdrawForm.amount" type="digit" label="提现星石" placeholder="请输入" />
         <van-field label="到账金额">
           <template #input><span style="color: #00b894; font-weight: 600;">{{ realAmount }} 元</span></template>
@@ -45,19 +45,31 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { showToast, showSuccessToast } from 'vant'
-import { getWallet, getTransactions, createWithdraw } from '@/api'
+import { getWallet, getTransactions, createWithdraw, getPublicConfig } from '@/api'
 import dayjs from 'dayjs'
 const wallet = ref<any>(null); const list = ref<any[]>([])
 const loading = ref(false); const finished = ref(false); const page = ref(1)
 const showWithdraw = ref(false); const showPayPicker = ref(false)
+const minWithdraw = ref(100)
+const withdrawFeeRate = ref(5)
+const coinRate = ref(10)
 const withdrawForm = reactive({ amount: 100, payMethod: 'alipay', payName: '', payAccount: '' })
 const payOptions = [{ text: '支付宝', value: 'alipay' }, { text: '微信', value: 'wechat' }, { text: '银行卡', value: 'bank' }]
 const payMethodText = computed(() => payOptions.find(o => o.value === withdrawForm.payMethod)?.text)
 const realAmount = computed(() => {
   const amount = Number(withdrawForm.amount) || 0
-  const fee = Math.max(1, Math.round(amount * 0.05))
-  return ((amount - fee) / 10).toFixed(2)
+  const fee = Math.max(1, Math.round(amount * withdrawFeeRate.value / 100))
+  return ((amount - fee) / coinRate.value).toFixed(2)
 })
+const loadConfig = async () => {
+  try {
+    const res: any = await getPublicConfig()
+    if (res.minWithdraw) minWithdraw.value = res.minWithdraw
+    if (res.withdrawFeeRate !== undefined) withdrawFeeRate.value = res.withdrawFeeRate
+    if (res.coinExchangeRate) coinRate.value = res.coinExchangeRate
+    withdrawForm.amount = minWithdraw.value
+  } catch (e) {}
+}
 const loadWallet = async () => { wallet.value = await getWallet() }
 const loadData = async () => {
   loading.value = true
@@ -69,7 +81,7 @@ const loadData = async () => {
 }
 const onPayConfirm = ({ selectedOptions }: any) => { withdrawForm.payMethod = selectedOptions[0].value; showPayPicker.value = false }
 const submitWithdraw = async () => {
-  if (withdrawForm.amount < 100) { showToast('最低提现100星石'); return }
+  if (withdrawForm.amount < minWithdraw.value) { showToast(`最低提现${minWithdraw.value}星石`); return }
   if (!withdrawForm.payName || !withdrawForm.payAccount) { showToast('请填写收款信息'); return }
   await createWithdraw(withdrawForm)
   showSuccessToast('提现申请已提交')
@@ -78,7 +90,7 @@ const submitWithdraw = async () => {
 }
 const typeText = (t: string) => ({ INCOME: '订单收入', WITHDRAW: '提现', WITHDRAW_REFUND: '提现退回', ADJUST: '调整' }[t] || t)
 const formatTime = (t: string) => dayjs(t).format('MM-DD HH:mm')
-onMounted(() => { loadWallet(); loadData() })
+onMounted(() => { loadConfig(); loadWallet(); loadData() })
 </script>
 <style scoped>
 .wallet-header { background: linear-gradient(135deg, #00b894, #55efc4); color: #fff; padding: 30px 20px; text-align: center; }
