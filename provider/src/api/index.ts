@@ -3,7 +3,7 @@ import request from '@/utils/request'
 export const register = (data: any) => request.post('/auth/register/provider', data)
 export const login = (data: any) => request.post('/auth/login', data)
 export const getProfile = () => request.get('/auth/profile')
-export const updateProfile = (data: any) => request.put('/user/profile', data)
+export const updateProfile = (data: any) => request.put('/provider/profile', data)
 
 // 陪玩资料
 export const getMyProfile = () => request.get('/provider/my-profile')
@@ -12,7 +12,7 @@ export const toggleOnline = (online: boolean) => request.put('/provider/online',
 export const toggleAcceptOrder = (accept: boolean) => request.put('/provider/accept-order', { acceptOrder: accept })
 
 // 服务定价
-export const getMyServices = () => request.get('/provider/my-services')
+export const getMyServices = () => request.get('/provider/my/services')
 export const updateServicePrice = (id: number, price: number) =>
   request.put(`/provider/service/${id}/price`, { price })
 export const toggleService = (id: number, enabled: boolean) =>
