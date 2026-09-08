@@ -1,16 +1,45 @@
 <template>
   <div class="order-create">
-    <van-nav-bar title="创建订单" left-arrow @click-left="$router.back()" />
-    <!-- 商品信息（从商品卡片跳转时显示） -->
+    <van-nav-bar title="确认订单" left-arrow @click-left="$router.back()" />
+
+    <!-- 商品信息 -->
     <van-cell-group inset v-if="productName" style="margin-top: 12px;">
       <van-cell title="商品" :value="productName" />
-      <van-cell title="商品价" :value="productPrice + ' 星石'" />
+      <van-cell title="单价" :value="productPrice + ' 星石'" />
     </van-cell-group>
+
+    <!-- 陪玩选择 -->
+    <van-cell-group inset title="选择陪玩" style="margin-top: 12px;">
+      <van-cell
+        title="暂不选择（店内陪玩都可接单）"
+        :value="assignMode === 'none' ? '已选' : ''"
+        is-link
+        @click="assignMode = 'none'; selectedProviders = []"
+      >
+        <template #right-icon>
+          <van-icon v-if="assignMode === 'none'" name="success" color="#07c160" />
+        </template>
+      </van-cell>
+      <van-cell
+        title="指定陪玩（可选择1-2人）"
+        :value="selectedProviders.length > 0 ? selectedProviders.length + '人' : ''"
+        is-link
+        @click="openProviderPicker"
+      >
+        <template #right-icon>
+          <van-icon v-if="assignMode === '指定'" name="success" color="#07c160" />
+        </template>
+      </van-cell>
+      <div v-if="selectedProviders.length > 0" class="selected-providers">
+        <van-tag v-for="p in selectedProviders" :key="p.id" closable type="primary" @close="removeProvider(p)">
+          {{ p.nickname }}
+        </van-tag>
+      </div>
+    </van-cell-group>
+
     <van-form @submit="handleSubmit">
-      <van-cell-group inset title="选择服务">
-        <van-field name="serviceItemId" label="服务项目" :model-value="selectedService?.serviceItem?.name" placeholder="请选择" is-link readonly @click="showServicePicker = true" />
-        <van-field name="duration" label="数量" :model-value="form.duration" placeholder="请输入" type="digit" @update:model-value="v => form.duration = Number(v)" />
-        <van-field label="单价" :model-value="selectedService?.price + ' 星石'" readonly />
+      <van-cell-group inset title="订单信息" style="margin-top: 12px;">
+        <van-field name="duration" label="数量" :model-value="form.duration" type="digit" @update:model-value="v => form.duration = Number(v)" />
         <van-field label="总计">
           <template #input>
             <span style="color: #f5576c; font-weight: 600; font-size: 18px;">{{ totalAmount }} 星石</span>
@@ -37,22 +66,34 @@
       </div>
     </van-form>
 
-    <!-- 服务选择弹窗 -->
-    <van-popup v-model:show="showServicePicker" position="bottom" round>
-      <van-picker
-        :columns="serviceColumns"
-        @confirm="onServiceConfirm"
-        @cancel="showServicePicker = false"
-      />
+    <!-- 陪玩选择弹窗 -->
+    <van-popup v-model:show="showProviderPicker" position="bottom" round style="height: 70%;">
+      <div class="picker-header">
+        <span>选择陪玩（最多2人）</span>
+        <van-button size="small" type="primary" @click="confirmProviders">确定</van-button>
+      </div>
+      <div class="provider-list">
+        <div
+          v-for="p in providers"
+          :key="p.id"
+          class="provider-item"
+          :class="{ selected: tempSelected.includes(p.id) }"
+          @click="toggleProvider(p)"
+        >
+          <van-image round width="48" height="48" :src="p.avatar || defaultAvatar" />
+          <div class="provider-info">
+            <div class="name">{{ p.nickname }}</div>
+            <div class="meta">{{ p.providerProfile?.rank || '未设置' }} · {{ p.providerProfile?.games?.length || 0 }}款游戏</div>
+          </div>
+          <van-icon v-if="tempSelected.includes(p.id)" name="success" color="#07c160" />
+        </div>
+        <div v-if="providers.length === 0" style="text-align: center; color: #999; padding: 40px;">暂无店内陪玩</div>
+      </div>
     </van-popup>
 
     <!-- 联系方式选择 -->
     <van-popup v-model:show="showContactPicker" position="bottom" round>
-      <van-picker
-        :columns="contactOptions"
-        @confirm="onContactConfirm"
-        @cancel="showContactPicker = false"
-      />
+      <van-picker :columns="contactOptions" @confirm="onContactConfirm" @cancel="showContactPicker = false" />
     </van-popup>
   </div>
 </template>
@@ -61,58 +102,93 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
-import { getProviderDetail, createOrder, getWallet } from '@/api'
+import { getProviderList, createOrder, getWallet, getGameList } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(false)
-const provider = ref<any>(null)
-const services = ref<any[]>([])
-const selectedService = ref<any>(null)
-const showServicePicker = ref(false)
+const providers = ref<any[]>([])
+const selectedProviders = ref<any[]>([])
+const tempSelected = ref<number[]>([])
+const assignMode = ref<'none' | '指定'>('none')
+const showProviderPicker = ref(false)
 const showContactPicker = ref(false)
+const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 
-// 商品预填（从商品卡片跳转）
+// 商品预填
 const productName = route.query.productName as string || ''
 const productPrice = Number(route.query.price) || 0
+const productId = Number(route.query.productId) || 0
 
 const form = reactive({
-  providerId: Number(route.query.providerId) || 0,
   serviceItemId: 0,
+  gameId: 0,
   duration: 1,
   contactType: 'QQ',
   contactValue: '',
   requirement: productName ? `购买商品：${productName}` : '',
 })
 
-const serviceColumns = computed(() => services.value.map(s => ({ text: `${s.serviceItem?.name} - ${s.price}星石`, value: s })))
 const contactOptions = [
   { text: 'QQ', value: 'QQ' },
   { text: '微信', value: 'WECHAT' },
   { text: '游戏ID', value: 'GAME_ID' },
 ]
 const contactTypeText = computed(() => contactOptions.find(o => o.value === form.contactType)?.text || '')
-const totalAmount = computed(() => (selectedService.value?.price || 0) * form.duration)
+const totalAmount = computed(() => productPrice * form.duration)
 
 const loadData = async () => {
-  if (!form.providerId) {
-    showToast('请先选择陪玩')
-    setTimeout(() => router.back(), 1500)
-    return
+  try {
+    // 获取店内陪玩列表
+    const res: any = await getProviderList({ page: 1, pageSize: 50, isOnline: true })
+    providers.value = res.list || res.data?.list || []
+  } catch (e) {
+    providers.value = []
   }
-  const detail: any = await getProviderDetail(form.providerId)
-  provider.value = detail
-  services.value = detail.providerProfile?.services?.filter((s: any) => s.isEnabled) || []
-  if (services.value.length > 0) {
-    selectedService.value = services.value[0]
-    form.serviceItemId = services.value[0].serviceItemId
+  // 获取第一个服务项目作为默认（商品下单时不需要用户选）
+  try {
+    const games: any = await getGameList()
+    const gameList = Array.isArray(games) ? games : (games?.data || [])
+    if (gameList.length > 0 && gameList[0].serviceItems?.length > 0) {
+      form.serviceItemId = gameList[0].serviceItems[0].id
+      form.gameId = gameList[0].id
+    }
+  } catch (e) {}
+}
+
+const toggleProvider = (p: any) => {
+  const idx = tempSelected.value.indexOf(p.id)
+  if (idx > -1) {
+    tempSelected.value.splice(idx, 1)
+  } else {
+    if (tempSelected.value.length >= 2) {
+      showToast('最多选择2位陪玩')
+      return
+    }
+    tempSelected.value.push(p.id)
   }
 }
 
-const onServiceConfirm = ({ selectedOptions }: any) => {
-  selectedService.value = selectedOptions[0].value
-  form.serviceItemId = selectedService.value.serviceItemId
-  showServicePicker.value = false
+const confirmProviders = () => {
+  if (tempSelected.value.length === 0) {
+    showToast('请至少选择1位陪玩')
+    return
+  }
+  selectedProviders.value = providers.value.filter(p => tempSelected.value.includes(p.id))
+  assignMode.value = '指定'
+  showProviderPicker.value = false
+}
+
+const removeProvider = (p: any) => {
+  selectedProviders.value = selectedProviders.value.filter(x => x.id !== p.id)
+  if (selectedProviders.value.length === 0) {
+    assignMode.value = 'none'
+  }
+}
+
+const openProviderPicker = () => {
+  tempSelected.value = selectedProviders.value.map(p => p.id)
+  showProviderPicker.value = true
 }
 
 const onContactConfirm = ({ selectedOptions }: any) => {
@@ -121,8 +197,8 @@ const onContactConfirm = ({ selectedOptions }: any) => {
 }
 
 const handleSubmit = async () => {
-  if (!form.serviceItemId) { showToast('请选择服务项目'); return }
   if (!form.contactValue) { showToast('请输入联系方式'); return }
+  if (!form.serviceItemId) { showToast('服务项目加载中，请稍后'); return }
 
   const wallet: any = await getWallet()
   if (wallet.balance < totalAmount.value) {
@@ -137,9 +213,35 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    const res: any = await createOrder(form)
-    showToast('下单成功')
-    router.replace(`/order/${res.id}`)
+    if (selectedProviders.value.length === 0) {
+      // 不指定陪玩：进入抢单池
+      const res: any = await createOrder({
+        ...form,
+        title: productName || '陪玩订单',
+        overridePrice: productPrice || undefined,
+        productName,
+      })
+      showToast('下单成功，等待陪玩接单')
+      router.replace(`/order/${res.id}`)
+    } else {
+      // 指定1-2个陪玩：为每个陪玩创建订单
+      let firstOrderId = 0
+      for (let i = 0; i < selectedProviders.value.length; i++) {
+        const p = selectedProviders.value[i]
+        const res: any = await createOrder({
+          ...form,
+          providerId: p.id,
+          title: productName || '陪玩订单',
+          overridePrice: productPrice || undefined,
+          productName,
+        })
+        if (i === 0) firstOrderId = res.id
+      }
+      showToast(`已为${selectedProviders.value.length}位陪玩下单`)
+      router.replace(`/order/${firstOrderId}`)
+    }
+  } catch (e: any) {
+    showToast(e?.response?.data?.message || '下单失败')
   } finally {
     loading.value = false
   }
@@ -150,4 +252,12 @@ onMounted(loadData)
 
 <style scoped>
 .order-create { padding-bottom: 20px; }
+.selected-providers { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+.picker-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #f0f0f0; font-weight: 600; }
+.provider-list { padding: 8px 16px; max-height: calc(70vh - 60px); overflow-y: auto; }
+.provider-item { display: flex; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid #f5f5f5; }
+.provider-item.selected { background: #e8f5e9; border-radius: 8px; }
+.provider-info { flex: 1; }
+.provider-info .name { font-size: 15px; font-weight: 500; }
+.provider-info .meta { font-size: 12px; color: #999; margin-top: 2px; }
 </style>

@@ -28,6 +28,8 @@ export class OrderService {
     contactType?: string;
     contactValue?: string;
     gameAccount?: string;
+    overridePrice?: number; // 商品下单时覆盖单价
+    productName?: string; // 商品名称（备注用）
   }) {
     // 获取服务项目信息
     const serviceItem = await this.prisma.serviceItem.findUnique({
@@ -64,6 +66,11 @@ export class OrderService {
         throw new BadRequestException('该陪玩暂不接单');
       }
       unitPrice = providerService.price;
+    }
+
+    // 商品下单时用商品价格覆盖
+    if (data.overridePrice && data.overridePrice > 0) {
+      unitPrice = data.overridePrice;
     }
 
     const totalAmount = unitPrice * data.duration;
