@@ -128,19 +128,24 @@ export class ProviderService {
 
     // 根据陪玩段位和可接游戏，查询段位定价
     const rank = provider.providerProfile.rank;
-    const gameIds = provider.providerProfile.games.map((g: any) => g.gameId);
+    const games = provider.providerProfile.games || [];
     let pricedServices: any[] = [];
-    if (rank && gameIds.length > 0) {
-      const pricings = await this.prisma.gamePricing.findMany({
-        where: { rank, gameId: { in: gameIds } },
-        include: { game: true },
-      });
-      pricedServices = pricings.map((p: any) => ({
-        id: p.id,
-        gameId: p.gameId,
-        gameName: p.game.name,
+    if (games.length > 0) {
+      // 先查询所有已设置的定价
+      const pricingMap: Record<number, number> = {};
+      if (rank) {
+        const pricings = await this.prisma.gamePricing.findMany({
+          where: { rank, gameId: { in: games.map((g: any) => g.gameId) } },
+        });
+        pricings.forEach((p: any) => { pricingMap[p.gameId] = p.pricePerHour; });
+      }
+      // 遍历所有可接游戏，有定价显示价格，没定价显示0
+      pricedServices = games.map((g: any, idx: number) => ({
+        id: g.id || idx,
+        gameId: g.gameId,
+        gameName: g.game?.name || '',
         name: '陪玩服务',
-        price: p.pricePerHour,
+        price: pricingMap[g.gameId] || 0,
         unit: 'hour',
       }));
     }
