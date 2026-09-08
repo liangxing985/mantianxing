@@ -126,7 +126,26 @@ export class ProviderService {
       throw new NotFoundException('陪玩不存在');
     }
 
-    return provider;
+    // 根据陪玩段位和可接游戏，查询段位定价
+    const rank = provider.providerProfile.rank;
+    const gameIds = provider.providerProfile.games.map((g: any) => g.gameId);
+    let pricedServices: any[] = [];
+    if (rank && gameIds.length > 0) {
+      const pricings = await this.prisma.gamePricing.findMany({
+        where: { rank, gameId: { in: gameIds } },
+        include: { game: true },
+      });
+      pricedServices = pricings.map((p: any) => ({
+        id: p.id,
+        gameId: p.gameId,
+        gameName: p.game.name,
+        name: '陪玩服务',
+        price: p.pricePerHour,
+        unit: 'hour',
+      }));
+    }
+
+    return { ...provider, pricedServices };
   }
 
   // 更新陪玩资料

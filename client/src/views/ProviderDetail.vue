@@ -37,13 +37,25 @@
 
     <div class="section">
       <h3>服务项目</h3>
-      <div v-for="svc in profile.services" :key="svc.id" class="service-item">
-        <div class="svc-info">
-          <span class="svc-name">{{ svc.serviceItem?.name }}</span>
-          <span class="svc-game">{{ svc.serviceItem?.game?.name }}</span>
+      <div v-if="profile.pricedServices && profile.pricedServices.length > 0">
+        <div v-for="svc in profile.pricedServices" :key="svc.id" class="service-item">
+          <div class="svc-info">
+            <span class="svc-name">{{ svc.name }}</span>
+            <span class="svc-game">{{ svc.gameName }}</span>
+          </div>
+          <div class="svc-price">{{ svc.price }} 星石/{{ unitText(svc.unit) }}</div>
         </div>
-        <div class="svc-price">{{ svc.price }} 星石/{{ unitText(svc.unit) }}</div>
       </div>
+      <div v-else>
+        <div v-for="svc in profile.services" :key="svc.id" class="service-item">
+          <div class="svc-info">
+            <span class="svc-name">{{ svc.serviceItem?.name }}</span>
+            <span class="svc-game">{{ svc.serviceItem?.game?.name }}</span>
+          </div>
+          <div class="svc-price">{{ svc.price }} 星石/{{ unitText(svc.unit) }}</div>
+        </div>
+      </div>
+      <div v-if="(profile.pricedServices?.length === 0) && (profile.services?.length === 0)" class="empty">暂无服务项目</div>
     </div>
 
     <div class="section">
