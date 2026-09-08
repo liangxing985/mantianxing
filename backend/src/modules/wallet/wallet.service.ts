@@ -57,6 +57,7 @@ export class WalletService {
     payAccount: string;
     payName: string;
   }) {
+    const amount = Number(data.amount);
     const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
     if (!wallet) throw new NotFoundException('钱包不存在');
 
@@ -64,24 +65,24 @@ export class WalletService {
     const withdrawFeeRate = await this.configService.getNumber('withdraw_fee_rate') || 5;
     const coinRate = await this.configService.getNumber('coin_exchange_rate') || 10;
 
-    if (data.amount < minWithdraw) {
+    if (amount < minWithdraw) {
       throw new BadRequestException(`最低提现${minWithdraw}星石（${(minWithdraw / coinRate).toFixed(1)}元）`);
     }
-    if (wallet.balance < data.amount) {
+    if (wallet.balance < amount) {
       throw new BadRequestException('余额不足');
     }
 
     // 手续费按配置比例，最低1星石
-    const fee = Math.max(1, Math.floor(data.amount * withdrawFeeRate / 100));
-    const realAmount = data.amount - fee;
+    const fee = Math.max(1, Math.floor(amount * withdrawFeeRate / 100));
+    const realAmount = amount - fee;
 
     await this.prisma.$transaction(async (tx) => {
       // 冻结提现金额
       await tx.wallet.update({
         where: { userId },
         data: {
-          balance: { decrement: data.amount },
-          frozen: { increment: data.amount },
+          balance: { decrement: amount },
+          frozen: { increment: amount },
         },
       });
 
@@ -89,7 +90,7 @@ export class WalletService {
       await tx.withdraw.create({
         data: {
           userId,
-          amount: data.amount,
+          amount: amount,
           fee,
           realAmount: realAmount / coinRate,
           payMethod: data.payMethod,
@@ -106,9 +107,9 @@ export class WalletService {
           walletId: wallet.id,
           userId,
           type: 'WITHDRAW',
-          amount: -data.amount,
+          amount: -amount,
           balanceAfter: updatedWallet.balance,
-          remark: `申请提现${data.amount}星石`,
+          remark: `申请提现${amount}星石`,
         },
       });
     });
