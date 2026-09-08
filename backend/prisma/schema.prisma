@@ -125,6 +125,7 @@ model Game {
 
   serviceItems ServiceItem[]
   providerGames ProviderGame[]
+  gamePricings GamePricing[]
 
   @@map("games")
 }
@@ -148,6 +149,20 @@ model ServiceItem {
 
   @@index([gameId])
   @@map("service_items")
+}
+
+// 游戏等级定价表（按游戏+陪玩等级设置小时价格，管理后台统一配置）
+model GamePricing {
+  id           Int      @id @default(autoincrement())
+  gameId       Int
+  game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  level        Int      // 陪玩等级 1-10
+  pricePerHour Int      // 每小时价格（星石）
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([gameId, level])
+  @@map("game_pricings")
 }
 
 // ==================== 订单体系 ====================

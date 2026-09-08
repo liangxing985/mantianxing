@@ -15,6 +15,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
 import { ProductModule } from './modules/product/product.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { UploadModule } from './modules/upload/upload.module';
     ProductModule,
     ActivityModule,
     UploadModule,
+    PricingModule,
   ],
 })
 export class AppModule {}

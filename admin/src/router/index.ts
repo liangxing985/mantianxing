@@ -72,6 +72,12 @@ const routes = [
         meta: { title: '游戏管理', icon: 'Game' },
       },
       {
+        path: 'pricing',
+        name: 'Pricing',
+        component: () => import('@/views/PricingManage.vue'),
+        meta: { title: '定价管理', icon: 'Money' },
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('@/views/SystemSettings.vue'),

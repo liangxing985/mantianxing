@@ -1,39 +1,59 @@
 <template>
   <div>
     <van-nav-bar title="服务定价" left-arrow @click-left="$router.back()" />
+    <div class="level-card">
+      <div class="level-info">
+        <span class="level-label">当前等级</span>
+        <span class="level-value">Lv.{{ profile?.level || 1 }}</span>
+      </div>
+      <p class="level-tip">价格由平台统一设置，陪玩端仅可查看，如需调整请联系运营</p>
+    </div>
+
     <van-cell-group inset style="margin-top: 12px;">
-      <div v-for="svc in services" :key="svc.id" class="service-item">
+      <div v-for="item in priceList" :key="item.gameId" class="service-item">
         <div class="svc-info">
-          <div class="svc-name">{{ svc.serviceItem?.name }}</div>
-          <div class="svc-game">{{ svc.serviceItem?.game?.name }} · {{ unitText(svc.unit) }}</div>
+          <div class="svc-name">{{ item.gameName }}</div>
+          <div class="svc-game">陪玩服务 · 按小时</div>
         </div>
-        <div class="svc-right">
-          <van-stepper v-model="svc.price" :min="1" :max="9999" @change="(v: number) => updatePrice(svc, v)" />
-          <van-switch :model-value="svc.isEnabled" size="20" @change="(v: boolean) => toggleSvc(svc, v)" />
+        <div class="svc-price">
+          <span class="price-num">{{ item.pricePerHour }}</span>
+          <span class="price-unit">星石/小时</span>
         </div>
       </div>
     </van-cell-group>
-    <van-empty v-if="services.length === 0" description="暂无服务项目，请联系运营添加" />
+    <van-empty v-if="priceList.length === 0" description="暂无定价，请联系运营配置" />
   </div>
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { showSuccessToast } from 'vant'
-import { getMyServices, updateServicePrice, toggleService } from '@/api'
-const services = ref<any[]>([])
-const loadData = async () => { services.value = await getMyServices() as any }
-const updatePrice = async (svc: any, price: number) => {
-  await updateServicePrice(svc.id, price); showSuccessToast('价格已更新')
+import { getMyProfile } from '@/api'
+
+const profile = ref<any>(null)
+const priceList = ref<any[]>([])
+
+const loadData = async () => {
+  try {
+    const res: any = await getMyProfile()
+    const data = res.data || res
+    profile.value = data?.providerProfile || data || {}
+    // 根据等级获取定价
+    const level = profile.value?.level || 1
+    const pricingRes: any = await fetch(`/api/pricing/public/level/${level}`).then(r => r.json())
+    priceList.value = pricingRes.data || pricingRes || []
+  } catch (e) {}
 }
-const toggleSvc = async (svc: any, enabled: boolean) => {
-  await toggleService(svc.id, enabled); svc.isEnabled = enabled
-}
-const unitText = (u: string) => ({ hour: '按小时', game: '按局', package: '包段' }[u] || u)
 onMounted(loadData)
 </script>
 <style scoped>
+.level-card { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 20px 16px; margin: 12px; border-radius: 12px; }
+.level-info { display: flex; align-items: center; gap: 12px; }
+.level-label { font-size: 14px; opacity: 0.9; }
+.level-value { font-size: 24px; font-weight: 700; }
+.level-tip { font-size: 12px; opacity: 0.8; margin-top: 8px; }
 .service-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f5f5f5; }
 .svc-name { font-size: 15px; font-weight: 600; }
 .svc-game { font-size: 12px; color: #999; margin-top: 2px; }
-.svc-right { display: flex; align-items: center; gap: 12px; }
+.svc-price { text-align: right; }
+.price-num { font-size: 20px; font-weight: 700; color: #ff6b35; }
+.price-unit { font-size: 12px; color: #999; margin-left: 4px; }
 </style>

@@ -77,6 +77,10 @@ export const getProviderGames = (id: number) => request.get(`/provider/admin/${i
 export const setProviderGames = (id: number, gameIds: number[]) =>
   request.put(`/provider/admin/${id}/games`, { gameIds })
 
+// ==================== 定价管理 ====================
+export const getAllPricings = () => request.get('/pricing/list')
+export const batchSavePricings = (items: any[]) => request.post('/pricing/batch', { items })
+
 // ==================== 上传 ====================
 export const uploadImage = (file: File) => {
   const formData = new FormData()
