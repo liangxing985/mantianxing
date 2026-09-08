@@ -12,6 +12,10 @@ const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = 
   min_withdraw: { value: '100', description: '最低提现金额（星石）' },
   withdraw_fee_rate: { value: '5', description: '提现手续费比例（%）' },
   order_expire_hours: { value: '2', description: '订单过期时间（小时）' },
+  rank_options: {
+    value: JSON.stringify(['王者', '星耀', '钻石', '铂金', '黄金', '白银', '青铜']),
+    description: '段位选项列表（JSON数组）',
+  },
 };
 
 @Injectable()

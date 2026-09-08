@@ -79,13 +79,7 @@
         </el-form-item>
         <el-form-item label="游戏段位">
           <el-select v-model="editForm.rank" placeholder="选择段位" style="width:100%;" allow-filter>
-            <el-option label="王者" value="王者" />
-            <el-option label="星耀" value="星耀" />
-            <el-option label="钻石" value="钻石" />
-            <el-option label="铂金" value="铂金" />
-            <el-option label="黄金" value="黄金" />
-            <el-option label="白银" value="白银" />
-            <el-option label="青铜" value="青铜" />
+            <el-option v-for="r in rankOptions" :key="r" :label="r" :value="r" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -103,13 +97,7 @@
         </el-form-item>
         <el-form-item label="游戏段位">
           <el-select v-model="rankValue" placeholder="选择段位" style="width:100%;">
-            <el-option label="王者" value="王者" />
-            <el-option label="星耀" value="星耀" />
-            <el-option label="钻石" value="钻石" />
-            <el-option label="铂金" value="铂金" />
-            <el-option label="黄金" value="黄金" />
-            <el-option label="白银" value="白银" />
-            <el-option label="青铜" value="青铜" />
+            <el-option v-for="r in rankOptions" :key="r" :label="r" :value="r" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -124,7 +112,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getProviderAdminList, adminUpdateProvider, updateProviderRank, banProvider, deleteProvider } from '@/api'
+import { getProviderAdminList, adminUpdateProvider, updateProviderRank, banProvider, deleteProvider, getSystemConfig } from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -134,6 +122,20 @@ const page = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
 const status = ref('')
+const rankOptions = ref<string[]>(['王者', '星耀', '钻石', '铂金', '黄金', '白银', '青铜'])
+
+const loadRankOptions = async () => {
+  try {
+    const res: any = await getSystemConfig()
+    const data = res.data || res
+    if (data.rank_options) {
+      const arr = JSON.parse(data.rank_options)
+      if (Array.isArray(arr) && arr.length > 0) {
+        rankOptions.value = arr.filter((r: string) => r && r.trim())
+      }
+    }
+  } catch (e) {}
+}
 
 const editDialog = ref(false)
 const editForm = reactive({ id: null as number | null, nickname: '', phone: '', bio: '', level: 1, rank: '' })
@@ -217,7 +219,10 @@ const remove = async (row: any) => {
   loadList()
 }
 
-onMounted(loadList)
+onMounted(() => {
+  loadRankOptions()
+  loadList()
+})
 </script>
 
 <style scoped>

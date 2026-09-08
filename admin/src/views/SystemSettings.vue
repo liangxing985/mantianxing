@@ -55,6 +55,25 @@
         </el-form-item>
       </el-form>
     </el-card>
+    <el-card class="config-card" shadow="never" style="margin-top:16px;">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">段位配置</span>
+          <el-button size="small" type="primary" @click="addRank">添加段位</el-button>
+        </div>
+      </template>
+      <el-form label-width="160px">
+        <el-form-item label="段位列表">
+          <div style="width:100%;">
+            <div v-for="(rank, idx) in rankOptions" :key="idx" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+              <el-input v-model="rankOptions[idx]" placeholder="段位名称，如：王者" style="flex:1;" />
+              <el-button size="small" type="danger" @click="removeRank(idx)" :disabled="rankOptions.length<=1">删除</el-button>
+            </div>
+            <div style="color:#909399;font-size:12px;">段位将按列表顺序显示在陪玩资料和老板端</div>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -70,6 +89,14 @@ const minWithdraw = ref(100)
 const withdrawFee = ref(5)
 const orderExpire = ref(2)
 const theme = reactive({ primaryColor: '#1a1a2e', accentColor: '#e94560', bgColor: '#0f0f1a' })
+const rankOptions = ref<string[]>(['王者', '星耀', '钻石', '铂金', '黄金', '白银', '青铜'])
+
+const addRank = () => {
+  rankOptions.value.push('')
+}
+const removeRank = (idx: number) => {
+  rankOptions.value.splice(idx, 1)
+}
 
 const loadConfig = async () => {
   const res: any = await getSystemConfig()
@@ -85,6 +112,14 @@ const loadConfig = async () => {
       Object.assign(theme, t)
     } catch {}
   }
+  if (data.rank_options) {
+    try {
+      const arr = JSON.parse(data.rank_options)
+      if (Array.isArray(arr) && arr.length > 0) {
+        rankOptions.value = arr.filter((r: string) => r && r.trim())
+      }
+    } catch {}
+  }
 }
 
 const saveConfig = async () => {
@@ -97,6 +132,7 @@ const saveConfig = async () => {
       { key: 'withdraw_fee_rate', value: String(withdrawFee.value) },
       { key: 'order_expire_hours', value: String(orderExpire.value) },
       { key: 'client_theme', value: JSON.stringify(theme) },
+      { key: 'rank_options', value: JSON.stringify(rankOptions.value.filter(r => r && r.trim())) },
     ]
     await updateSystemConfig(items)
     ElMessage.success('设置已保存')
