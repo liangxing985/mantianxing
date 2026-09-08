@@ -19,9 +19,9 @@
       <van-cell title="数量" :value="`${order.duration} ${unitText(order.unit)}`" />
       <van-cell title="单价" :value="`${order.unitPrice} 星石`" />
       <van-cell title="预计收入">
-        <template #value><span style="color: #00b894; font-weight: 600;">{{ Math.round(order.totalAmount * 0.8) }} 星石</span></template>
+        <template #value><span style="color: #00b894; font-weight: 600;">{{ order.providerIncome || Math.round(order.totalAmount * (100 - feeRate) / 100) }} 星石</span></template>
       </van-cell>
-      <van-cell title="平台抽成" :value="`${order.platformFee || Math.round(order.totalAmount * 0.2)} 星石 (20%)`" />
+      <van-cell title="平台抽成" :value="`${order.platformFee || Math.round(order.totalAmount * feeRate / 100)} 星石 (${feeRate}%)`" />
     </div>
 
     <!-- 报单凭证 -->
@@ -68,7 +68,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { showToast, showSuccessToast } from 'vant'
-import { getOrderDetail, startOrder, submitReport, uploadImage } from '@/api'
+import { getOrderDetail, startOrder, submitReport, uploadImage, getPublicConfig } from '@/api'
 const route = useRoute()
 const order = ref<any>(null)
 const showReport = ref(false)
@@ -76,6 +76,7 @@ const reportForm = reactive({ images: [] as string[], comment: '' })
 const fileList = ref<any[]>([])
 const uploading = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const feeRate = ref(20)
 
 const triggerFileInput = () => {
   fileInputRef.value?.click()
@@ -118,7 +119,13 @@ const onDelete = (index: number) => {
   reportForm.images.splice(index, 1)
 }
 
-const loadData = async () => { order.value = await getOrderDetail(Number(route.params.id)) }
+const loadData = async () => {
+  order.value = await getOrderDetail(Number(route.params.id))
+  try {
+    const config: any = await getPublicConfig()
+    if (config.platformFeeRate) feeRate.value = config.platformFeeRate
+  } catch (e) {}
+}
 
 const handleStart = async () => {
   await startOrder(order.value.id)

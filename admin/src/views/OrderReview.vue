@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getReviewList, approveReport, rejectReport } from '@/api'
+import { getReviewList, approveReport, rejectReport, getSystemConfig } from '@/api'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -76,13 +76,18 @@ const total = ref(0)
 const query = reactive({ page: 1, pageSize: 20 })
 const rejectDialog = ref(false)
 const rejectForm = reactive({ id: 0, comment: '' })
+const feeRate = ref(20)
 
 const loadData = async () => {
   loading.value = true
   try {
-    const res: any = await getReviewList(query)
+    const [res, config]: any[] = await Promise.all([
+      getReviewList(query),
+      getSystemConfig().catch(() => ({})),
+    ])
     list.value = res.list
     total.value = res.total
+    if (config.platform_fee_rate) feeRate.value = Number(config.platform_fee_rate)
   } finally {
     loading.value = false
   }
@@ -93,7 +98,7 @@ const formatTime = (t: string) => t ? dayjs(t).format('YYYY-MM-DD HH:mm') : '-'
 
 const handleApprove = async (row: any) => {
   await ElMessageBox.confirm(
-    `确定通过订单「${row.orderNo}」的报单吗？\n通过后将自动结算 ${row.totalAmount} 星石（平台抽成20%）`,
+    `确定通过订单「${row.orderNo}」的报单吗？\n通过后将自动结算 ${row.totalAmount} 星石（平台抽成${feeRate.value}%）`,
     '审核确认',
     { type: 'success', confirmButtonText: '通过并结算' }
   )
