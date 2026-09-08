@@ -151,17 +151,17 @@ model ServiceItem {
   @@map("service_items")
 }
 
-// 游戏等级定价表（按游戏+陪玩等级设置小时价格，管理后台统一配置）
+// 游戏段位定价表（按游戏+陪玩段位设置小时价格，管理后台统一配置）
 model GamePricing {
   id           Int      @id @default(autoincrement())
   gameId       Int
   game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  level        Int      // 陪玩等级 1-10
+  rank         String   @db.VarChar(50) // 陪玩段位：王者/星耀/钻石/铂金/黄金/白银/青铜
   pricePerHour Int      // 每小时价格（星石）
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([gameId, level])
+  @@unique([gameId, rank])
   @@map("game_pricings")
 }
 

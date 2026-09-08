@@ -9,7 +9,7 @@ export class PricingService {
   async getAllPricings() {
     return this.prisma.gamePricing.findMany({
       include: { game: true },
-      orderBy: [{ gameId: 'asc' }, { level: 'asc' }],
+      orderBy: [{ gameId: 'asc' }, { rank: 'asc' }],
     });
   }
 
@@ -17,17 +17,17 @@ export class PricingService {
   async getPricingsByGame(gameId: number) {
     return this.prisma.gamePricing.findMany({
       where: { gameId },
-      orderBy: { level: 'asc' },
+      orderBy: { rank: 'asc' },
     });
   }
 
   // 新增定价
-  async createPricing(data: { gameId: number; level: number; pricePerHour: number }) {
+  async createPricing(data: { gameId: number; rank: string; pricePerHour: number }) {
     return this.prisma.gamePricing.create({ data });
   }
 
   // 更新定价
-  async updatePricing(id: number, data: { pricePerHour?: number; level?: number }) {
+  async updatePricing(id: number, data: { pricePerHour?: number; rank?: string }) {
     return this.prisma.gamePricing.update({ where: { id }, data });
   }
 
@@ -36,11 +36,11 @@ export class PricingService {
     return this.prisma.gamePricing.delete({ where: { id } });
   }
 
-  // 批量保存定价（按游戏+等级）
-  async batchSavePricings(items: { gameId: number; level: number; pricePerHour: number }[]) {
+  // 批量保存定价（按游戏+段位）
+  async batchSavePricings(items: { gameId: number; rank: string; pricePerHour: number }[]) {
     for (const item of items) {
       const existing = await this.prisma.gamePricing.findUnique({
-        where: { gameId_level: { gameId: item.gameId, level: item.level } },
+        where: { gameId_rank: { gameId: item.gameId, rank: item.rank } },
       });
       if (existing) {
         await this.prisma.gamePricing.update({
@@ -54,17 +54,31 @@ export class PricingService {
     return { success: true, count: items.length };
   }
 
-  // 根据陪玩等级获取各游戏价格（陪玩端/老板端用）
-  async getPricingsByLevel(level: number) {
+  // 根据陪玩段位获取各游戏价格（陪玩端/老板端用）
+  async getPricingsByRank(rank: string) {
     const pricings = await this.prisma.gamePricing.findMany({
-      where: { level },
+      where: { rank },
       include: { game: true },
     });
     return pricings.map((p) => ({
       gameId: p.gameId,
       gameName: p.game.name,
-      level: p.level,
+      rank: p.rank,
       pricePerHour: p.pricePerHour,
     }));
+  }
+
+  // 根据接单量计算等级
+  static calculateLevel(orderCount: number): number {
+    if (orderCount >= 500) return 10;
+    if (orderCount >= 300) return 9;
+    if (orderCount >= 200) return 8;
+    if (orderCount >= 100) return 7;
+    if (orderCount >= 50) return 6;
+    if (orderCount >= 30) return 5;
+    if (orderCount >= 15) return 4;
+    if (orderCount >= 5) return 3;
+    if (orderCount >= 1) return 2;
+    return 1;
   }
 }

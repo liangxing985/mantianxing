@@ -3,10 +3,15 @@
     <van-nav-bar title="服务定价" left-arrow @click-left="$router.back()" />
     <div class="level-card">
       <div class="level-info">
+        <span class="level-label">当前段位</span>
+        <span class="level-value">{{ profile?.rank || '未设置' }}</span>
+      </div>
+      <div class="level-info" style="margin-top:8px;">
         <span class="level-label">当前等级</span>
         <span class="level-value">Lv.{{ profile?.level || 1 }}</span>
+        <span class="level-tip-inline">（接单量 {{ profile?.orderCount || 0 }} 单）</span>
       </div>
-      <p class="level-tip">价格由平台统一设置，陪玩端仅可查看，如需调整请联系运营</p>
+      <p class="level-tip">价格由平台按段位统一设置，陪玩端仅可查看，如需调整请联系运营</p>
     </div>
 
     <van-cell-group inset style="margin-top: 12px;">
@@ -36,10 +41,12 @@ const loadData = async () => {
     const res: any = await getMyProfile()
     const data = res.data || res
     profile.value = data?.providerProfile || data || {}
-    // 根据等级获取定价
-    const level = profile.value?.level || 1
-    const pricingRes: any = await fetch(`/api/pricing/public/level/${level}`).then(r => r.json())
-    priceList.value = pricingRes.data || pricingRes || []
+    // 根据段位获取定价
+    const rank = profile.value?.rank
+    if (rank) {
+      const pricingRes: any = await fetch(`/api/pricing/public/rank/${encodeURIComponent(rank)}`).then(r => r.json())
+      priceList.value = pricingRes.data || pricingRes || []
+    }
   } catch (e) {}
 }
 onMounted(loadData)
@@ -48,8 +55,9 @@ onMounted(loadData)
 .level-card { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; padding: 20px 16px; margin: 12px; border-radius: 12px; }
 .level-info { display: flex; align-items: center; gap: 12px; }
 .level-label { font-size: 14px; opacity: 0.9; }
-.level-value { font-size: 24px; font-weight: 700; }
-.level-tip { font-size: 12px; opacity: 0.8; margin-top: 8px; }
+.level-value { font-size: 22px; font-weight: 700; }
+.level-tip-inline { font-size: 12px; opacity: 0.8; }
+.level-tip { font-size: 12px; opacity: 0.8; margin-top: 12px; }
 .service-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f5f5f5; }
 .svc-name { font-size: 15px; font-weight: 600; }
 .svc-game { font-size: 12px; color: #999; margin-top: 2px; }

@@ -12,6 +12,20 @@ export class AdminService {
     private configService: SystemConfigService,
   ) {}
 
+  // 根据接单量计算等级
+  private calculateLevel(orderCount: number): number {
+    if (orderCount >= 500) return 10;
+    if (orderCount >= 300) return 9;
+    if (orderCount >= 200) return 8;
+    if (orderCount >= 100) return 7;
+    if (orderCount >= 50) return 6;
+    if (orderCount >= 30) return 5;
+    if (orderCount >= 15) return 4;
+    if (orderCount >= 5) return 3;
+    if (orderCount >= 1) return 2;
+    return 1;
+  }
+
   // ==================== 数据概览 ====================
   async getDashboard() {
     const [
@@ -253,11 +267,19 @@ export class AdminService {
         },
       });
 
-      // 更新陪玩订单数
-      await tx.providerProfile.update({
+      // 更新陪玩订单数和等级（根据接单量自动升级）
+      const updatedProfile = await tx.providerProfile.update({
         where: { userId: order.providerId! },
         data: { orderCount: { increment: 1 } },
       });
+      // 根据接单量计算等级
+      const newLevel = this.calculateLevel(updatedProfile.orderCount);
+      if (newLevel !== updatedProfile.level) {
+        await tx.providerProfile.update({
+          where: { userId: order.providerId! },
+          data: { level: newLevel },
+        });
+      }
 
       // 老板流水（消费记录）
       const customerWallet = await tx.wallet.findUnique({ where: { userId: order.customerId } });

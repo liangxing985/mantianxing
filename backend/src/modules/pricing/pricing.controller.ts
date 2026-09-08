@@ -29,7 +29,7 @@ export class PricingController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN, Role.OPERATOR)
   @Post('batch')
-  async batchSave(@Body() body: { items: { gameId: number; level: number; pricePerHour: number }[] }) {
+  async batchSave(@Body() body: { items: { gameId: number; rank: string; pricePerHour: number }[] }) {
     return this.pricingService.batchSavePricings(body.items || []);
   }
 
@@ -37,7 +37,7 @@ export class PricingController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Post()
-  async create(@Body() body: { gameId: number; level: number; pricePerHour: number }) {
+  async create(@Body() body: { gameId: number; rank: string; pricePerHour: number }) {
     return this.pricingService.createPricing(body);
   }
 
@@ -45,7 +45,7 @@ export class PricingController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Put(':id')
-  async update(@Param('id') id: number, @Body() body: { pricePerHour?: number; level?: number }) {
+  async update(@Param('id') id: number, @Body() body: { pricePerHour?: number; rank?: string }) {
     return this.pricingService.updatePricing(Number(id), body);
   }
 
@@ -57,9 +57,9 @@ export class PricingController {
     return this.pricingService.deletePricing(Number(id));
   }
 
-  // 公开：根据等级获取各游戏价格（陪玩端/老板端用）
-  @Get('public/level/:level')
-  async getByLevel(@Param('level') level: number) {
-    return this.pricingService.getPricingsByLevel(Number(level));
+  // 公开：根据段位获取各游戏价格（陪玩端/老板端用）
+  @Get('public/rank/:rank')
+  async getByRank(@Param('rank') rank: string) {
+    return this.pricingService.getPricingsByRank(rank);
   }
 }
