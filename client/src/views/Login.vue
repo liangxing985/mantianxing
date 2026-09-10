@@ -27,11 +27,12 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { showToast } from 'vant'
 import { login } from '@/api'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const form = reactive({ username: '', password: '' })
 
@@ -46,7 +47,8 @@ const handleLogin = async () => {
     localStorage.setItem('client_token', res.token)
     localStorage.setItem('client_user', JSON.stringify(res.user))
     showToast('登录成功')
-    router.push('/home')
+    const redirect = route.query.redirect as string
+    router.push(redirect || '/home')
   } finally {
     loading.value = false
   }

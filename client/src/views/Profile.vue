@@ -1,28 +1,44 @@
 <template>
   <div class="profile-page">
-    <div class="header">
-      <van-image round width="64" height="64" :src="user?.avatar || defaultAvatar" />
+    <!-- 未登录状态 -->
+    <div v-if="!isLoggedIn" class="header">
+      <van-image round width="64" height="64" :src="defaultAvatar" />
       <div class="info">
-        <h2>{{ user?.nickname }}</h2>
-        <p>{{ user?.phone || '未绑定手机号' }}</p>
+        <h2>未登录</h2>
+        <p>登录后享受更多服务</p>
       </div>
     </div>
-
-    <van-cell-group inset style="margin-top: 12px;">
-      <van-cell title="我的订单" is-link to="/orders" icon="orders-o" />
-      <van-cell title="我的钱包" is-link to="/wallet" icon="balance-o" />
-      <van-cell title="消息通知" is-link to="/messages" icon="chat-o" />
-    </van-cell-group>
-
-    <van-cell-group inset style="margin-top: 12px;">
-      <van-cell title="个人资料" is-link @click="showEdit = true" icon="user-o" />
-      <van-cell title="联系客服" is-link icon="service-o" @click="contactService" />
-      <van-cell title="关于我们" is-link icon="info-o" @click="showAbout = true" />
-    </van-cell-group>
-
-    <div style="padding: 20px 16px;">
-      <van-button block round plain type="danger" @click="handleLogout">退出登录</van-button>
+    <div v-if="!isLoggedIn" style="padding: 20px 16px; display: flex; gap: 12px;">
+      <van-button block round type="primary" @click="$router.push('/login')">登录</van-button>
+      <van-button block round plain @click="$router.push('/register')">注册</van-button>
     </div>
+
+    <!-- 已登录状态 -->
+    <template v-if="isLoggedIn">
+      <div class="header">
+        <van-image round width="64" height="64" :src="user?.avatar || defaultAvatar" />
+        <div class="info">
+          <h2>{{ user?.nickname }}</h2>
+          <p>{{ user?.phone || '未绑定手机号' }}</p>
+        </div>
+      </div>
+
+      <van-cell-group inset style="margin-top: 12px;">
+        <van-cell title="我的订单" is-link to="/orders" icon="orders-o" />
+        <van-cell title="我的钱包" is-link to="/wallet" icon="balance-o" />
+        <van-cell title="消息通知" is-link to="/messages" icon="chat-o" />
+      </van-cell-group>
+
+      <van-cell-group inset style="margin-top: 12px;">
+        <van-cell title="个人资料" is-link @click="showEdit = true" icon="user-o" />
+        <van-cell title="联系客服" is-link icon="service-o" @click="contactService" />
+        <van-cell title="关于我们" is-link icon="info-o" @click="showAbout = true" />
+      </van-cell-group>
+
+      <div style="padding: 20px 16px;">
+        <van-button block round plain type="danger" @click="handleLogout">退出登录</van-button>
+      </div>
+    </template>
 
     <!-- 编辑资料弹窗 -->
     <van-dialog v-model:show="showEdit" title="编辑资料" show-cancel-button @confirm="saveProfile">
@@ -48,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
 import { getProfile, updateProfile } from '@/api'
@@ -60,11 +76,16 @@ const showAbout = ref(false)
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 const editForm = reactive({ nickname: '', phone: '', bio: '' })
 
+const isLoggedIn = computed(() => !!localStorage.getItem('client_token'))
+
 const loadData = async () => {
-  user.value = await getProfile()
-  editForm.nickname = user.value.nickname
-  editForm.phone = user.value.phone || ''
-  editForm.bio = user.value.bio || ''
+  if (!isLoggedIn.value) return
+  try {
+    user.value = await getProfile()
+    editForm.nickname = user.value.nickname
+    editForm.phone = user.value.phone || ''
+    editForm.bio = user.value.bio || ''
+  } catch (e) {}
 }
 
 const saveProfile = async () => {
@@ -81,7 +102,7 @@ const handleLogout = async () => {
   await showConfirmDialog({ title: '退出登录', message: '确定退出登录吗？' })
   localStorage.removeItem('client_token')
   localStorage.removeItem('client_user')
-  router.push('/login')
+  router.push('/home')
 }
 
 onMounted(loadData)

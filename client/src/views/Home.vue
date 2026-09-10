@@ -123,7 +123,11 @@ const onActivityClick = (act: any) => {
 }
 
 const onProductClick = (p: any) => {
-  // MVP：点击商品跳转到下单页，预填商品信息
+  const token = localStorage.getItem('client_token')
+  if (!token) {
+    router.push('/login')
+    return
+  }
   router.push({ path: '/order/create', query: { productId: p.id, productName: p.name, price: p.price } })
 }
 

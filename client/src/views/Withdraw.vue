@@ -45,7 +45,7 @@
     <div class="fee-tip">
       <div>最低提现：{{ minWithdraw }} 星石（{{ (minWithdraw / coinRate).toFixed(1) }}元）</div>
       <div>手续费：{{ withdrawFeeRate }}%（最低1星石）</div>
-      <div v-if="amount > 0">
+      <div v-if="Number(amount) > 0">
         预计到账：{{ realAmount }} 星石（{{ (realAmount / coinRate).toFixed(2) }}元）
       </div>
     </div>
@@ -134,7 +134,7 @@ const statusText = (s: string) => ({
   PENDING: '审核中', APPROVED: '已通过', REJECTED: '已拒绝', COMPLETED: '已打款',
 }[s] || s)
 
-const statusType = (s: string) => ({
+const statusType = (s: string): any => ({
   PENDING: 'warning', APPROVED: 'primary', REJECTED: 'danger', COMPLETED: 'success',
 }[s] || 'default')
 

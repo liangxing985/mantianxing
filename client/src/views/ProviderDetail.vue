@@ -96,6 +96,11 @@ const loadData = async () => {
 
 const unitText = (u: string) => ({ hour: '小时', game: '局', package: '段' }[u] || u)
 const goOrder = () => {
+  const token = localStorage.getItem('client_token')
+  if (!token) {
+    router.push('/login')
+    return
+  }
   const firstService = profile.value.pricedServices?.[0]
   if (!firstService || firstService.price <= 0) {
     showToast('该陪玩尚未设置服务价格，请联系客服')
