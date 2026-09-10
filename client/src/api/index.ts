@@ -25,6 +25,7 @@ export const reviewOrder = (id: number, data: any) => request.post(`/order/${id}
 export const getWallet = () => request.get('/wallet/balance')
 export const getTransactions = (params: any) => request.get('/wallet/transactions', { params })
 export const createWithdraw = (data: any) => request.post('/wallet/withdraw', data)
+export const getWithdrawList = (params: any) => request.get('/wallet/withdraw/list', { params })
 
 // 消息
 export const getMessages = (params: any) => request.get('/message/list', { params })

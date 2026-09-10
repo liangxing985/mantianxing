@@ -82,6 +82,17 @@
             <el-option v-for="c in productCategoryOptions" :key="c.value" :label="c.label" :value="c.value" />
           </el-select>
         </el-form-item>
+        <el-form-item label="可选时长">
+          <div style="width:100%;">
+            <div v-for="(d, idx) in formDurationOptions" :key="idx" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+              <el-input v-model="formDurationOptions[idx].label" placeholder="显示名称，如：1小时" style="flex:1;" />
+              <el-input-number v-model="formDurationOptions[idx].value" :min="0.5" :step="0.5" style="width:130px;" placeholder="小时数" />
+              <el-button size="small" type="danger" @click="removeDuration(idx)" :disabled="formDurationOptions.length<=1">删除</el-button>
+            </div>
+            <el-button size="small" type="primary" @click="addDuration">添加时长</el-button>
+            <div style="color:#909399;font-size:12px;margin-top:4px;">老板端下单时的时长可选选项，留空则使用全局默认时长</div>
+          </div>
+        </el-form-item>
         <el-form-item label="商品图片">
           <el-upload
             :show-file-list="false"
@@ -131,7 +142,11 @@ const productCategoryOptions = ref<{label: string, value: string}[]>([
   { label: '热门', value: 'hot' },
   { label: '折扣', value: 'discount' },
 ])
-const form = reactive({ id: null as number | null, name: '', description: '', price: 0, originalPrice: null as number | null, gameId: null as number | null, category: 'normal', image: '', sortOrder: 0, isActive: true })
+const form = reactive({ id: null as number | null, name: '', description: '', price: 0, originalPrice: null as number | null, gameId: null as number | null, category: 'normal', image: '', durationOptions: '' as string, sortOrder: 0, isActive: true })
+const formDurationOptions = ref<{label: string, value: number}[]>([])
+
+const addDuration = () => { formDurationOptions.value.push({ label: '', value: 1 }) }
+const removeDuration = (idx: number) => { formDurationOptions.value.splice(idx, 1) }
 
 const categoryLabel = (val: string) => productCategoryOptions.value.find(c => c.value === val)?.label || val || '普通'
 const categoryTagType = (val: string) => {
@@ -166,8 +181,18 @@ const loadList = async () => {
 const openDialog = (row?: any) => {
   if (row) {
     Object.assign(form, row)
+    // 解析时长选项
+    try {
+      if (row.durationOptions) {
+        const arr = JSON.parse(row.durationOptions)
+        formDurationOptions.value = Array.isArray(arr) ? arr : []
+      } else {
+        formDurationOptions.value = []
+      }
+    } catch { formDurationOptions.value = [] }
   } else {
-    Object.assign(form, { id: null, name: '', description: '', price: 0, originalPrice: null, gameId: null, category: 'normal', image: '', sortOrder: 0, isActive: true })
+    Object.assign(form, { id: null, name: '', description: '', price: 0, originalPrice: null, gameId: null, category: 'normal', image: '', durationOptions: '', sortOrder: 0, isActive: true })
+    formDurationOptions.value = []
   }
   dialog.value = true
 }
@@ -176,6 +201,9 @@ const save = async () => {
   if (!form.name) { ElMessage.warning('请输入商品名称'); return }
   saving.value = true
   try {
+    // 序列化时长选项
+    const validDurations = formDurationOptions.value.filter(d => d && d.label && d.value > 0)
+    form.durationOptions = validDurations.length > 0 ? JSON.stringify(validDurations) : ''
     if (form.id) {
       await updateProduct(form.id, form)
     } else {

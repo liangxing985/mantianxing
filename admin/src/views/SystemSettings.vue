@@ -136,6 +136,27 @@
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card class="config-card" shadow="never" style="margin-top:16px;">
+      <template #header>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;">下单时长选项</span>
+          <el-button size="small" type="primary" @click="addDuration">添加时长</el-button>
+        </div>
+      </template>
+      <el-form label-width="160px">
+        <el-form-item label="时长列表">
+          <div style="width:100%;">
+            <div v-for="(d, idx) in durationOptions" :key="idx" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+              <el-input v-model="durationOptions[idx].label" placeholder="显示名称，如：1小时" style="flex:1;" />
+              <el-input-number v-model="durationOptions[idx].value" :min="0.5" :step="0.5" style="width:140px;" placeholder="小时数" />
+              <el-button size="small" type="danger" @click="removeDuration(idx)" :disabled="durationOptions.length<=1">删除</el-button>
+            </div>
+            <div style="color:#909399;font-size:12px;">老板端下单时的时长可选选项，值为小时数</div>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
   </div>
 </template>
 
@@ -163,6 +184,13 @@ const productCategoryOptions = ref<{label: string, value: string}[]>([
   { label: '热门', value: 'hot' },
   { label: '折扣', value: 'discount' },
 ])
+const durationOptions = ref<{label: string, value: number}[]>([
+  { label: '1小时', value: 1 },
+  { label: '2小时', value: 2 },
+  { label: '3小时', value: 3 },
+  { label: '5小时', value: 5 },
+  { label: '包夜(8小时)', value: 8 },
+])
 
 const addRank = () => { rankOptions.value.push('') }
 const removeRank = (idx: number) => { rankOptions.value.splice(idx, 1) }
@@ -172,6 +200,8 @@ const addCategory = () => { categoryOptions.value.push('') }
 const removeCategory = (idx: number) => { categoryOptions.value.splice(idx, 1) }
 const addProductCategory = () => { productCategoryOptions.value.push({ label: '', value: '' }) }
 const removeProductCategory = (idx: number) => { productCategoryOptions.value.splice(idx, 1) }
+const addDuration = () => { durationOptions.value.push({ label: '', value: 1 }) }
+const removeDuration = (idx: number) => { durationOptions.value.splice(idx, 1) }
 
 const loadConfig = async () => {
   const res: any = await getSystemConfig()
@@ -219,6 +249,14 @@ const loadConfig = async () => {
       }
     } catch {}
   }
+  if (data.duration_options) {
+    try {
+      const arr = JSON.parse(data.duration_options)
+      if (Array.isArray(arr) && arr.length > 0) {
+        durationOptions.value = arr.filter((d: any) => d && d.label && d.value > 0)
+      }
+    } catch {}
+  }
 }
 
 const saveConfig = async () => {
@@ -235,6 +273,7 @@ const saveConfig = async () => {
       { key: 'unit_options', value: JSON.stringify(unitOptions.value.filter(u => u && u.label && u.value)) },
       { key: 'game_categories', value: JSON.stringify(categoryOptions.value.filter(c => c && c.trim())) },
       { key: 'product_categories', value: JSON.stringify(productCategoryOptions.value.filter(c => c && c.label && c.value)) },
+      { key: 'duration_options', value: JSON.stringify(durationOptions.value.filter(d => d && d.label && d.value > 0)) },
     ]
     await updateSystemConfig(items)
     ElMessage.success('设置已保存')

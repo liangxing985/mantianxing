@@ -18,6 +18,7 @@ const routes = [
   { path: '/providers', component: () => import('@/views/ProviderList.vue'), meta: { noTab: true } },
   { path: '/order/create', component: () => import('@/views/OrderCreate.vue'), meta: { noTab: true } },
   { path: '/order/:id', component: () => import('@/views/OrderDetail.vue'), meta: { noTab: true } },
+  { path: '/withdraw', component: () => import('@/views/Withdraw.vue'), meta: { noTab: true } },
   { path: '/messages', component: () => import('@/views/Messages.vue'), meta: { noTab: true } },
 ]
 
