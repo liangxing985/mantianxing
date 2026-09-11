@@ -31,11 +31,21 @@ export class OrderService {
     overridePrice?: number; // 商品下单时覆盖单价
     productName?: string; // 商品名称（备注用）
   }) {
-    // 获取服务项目信息
-    const serviceItem = await this.prisma.serviceItem.findUnique({
-      where: { id: data.serviceItemId },
-      include: { game: true },
-    });
+    // 获取服务项目信息（商品模式下serviceItemId可能为0，自动查找该游戏第一个启用的服务项目）
+    let serviceItem = null;
+    if (data.serviceItemId && data.serviceItemId > 0) {
+      serviceItem = await this.prisma.serviceItem.findUnique({
+        where: { id: data.serviceItemId },
+        include: { game: true },
+      });
+    }
+    if (!serviceItem && data.gameId) {
+      serviceItem = await this.prisma.serviceItem.findFirst({
+        where: { gameId: data.gameId, isEnabled: true },
+        include: { game: true },
+        orderBy: { id: 'asc' },
+      });
+    }
     if (!serviceItem || !serviceItem.isEnabled) {
       throw new BadRequestException('服务项目不存在或已下架');
     }
@@ -54,7 +64,7 @@ export class OrderService {
       const providerService = await this.prisma.providerService.findFirst({
         where: {
           providerId: providerProfile.id,
-          serviceItemId: data.serviceItemId,
+          serviceItemId: serviceItem.id,
           isEnabled: true,
         },
         include: { providerProfile: true },
@@ -111,7 +121,7 @@ export class OrderService {
           customerId,
           providerId: data.providerId || null,
           gameId: data.gameId ?? serviceItem.gameId,
-          serviceItemId: data.serviceItemId,
+          serviceItemId: serviceItem.id,
           title: data.title || serviceItem.name,
           requirement: data.requirement,
           duration: data.duration,
@@ -154,13 +164,11 @@ export class OrderService {
     if (order.customerId !== customerId) throw new ForbiddenException('无权操作此订单');
 
     // 只有待支付、待接单、已接单状态可以取消
-    if (!['CREATED', 'PAID', 'ASSIGNED'].includes(order.status)) {
-      throw new BadRequestException('当前订单状态不可取消');
-    }
-
-    // 如果是服务中状态，需要协商
     if (order.status === 'SERVING') {
       throw new BadRequestException('服务进行中，请联系客服协商取消');
+    }
+    if (!['CREATED', 'PAID', 'ASSIGNED'].includes(order.status)) {
+      throw new BadRequestException('当前订单状态不可取消');
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -401,7 +409,7 @@ export class OrderService {
   }
 
   // 订单详情
-  async getOrderDetail(orderId: number, userId: number) {
+  async getOrderDetail(orderId: number, userId: number, role?: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -414,9 +422,9 @@ export class OrderService {
 
     if (!order) throw new NotFoundException('订单不存在');
 
-    // 权限检查：只有订单相关人员或管理员可查看
-    if (order.customerId !== userId && order.providerId !== userId) {
-      // 这里简化处理，管理员检查在guard层
+    // 权限检查：管理员/客服可查看所有订单，其他用户只能查看自己的订单
+    if (role !== 'ADMIN' && role !== 'OPERATOR' && order.customerId !== userId && order.providerId !== userId) {
+      throw new ForbiddenException('无权查看此订单');
     }
 
     return order;

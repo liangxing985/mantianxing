@@ -67,6 +67,6 @@ export class OrderController {
   // 订单详情
   @Get(':id')
   async getOrderDetail(@CurrentUser() user: any, @Param('id') id: number) {
-    return this.orderService.getOrderDetail(id, user.id);
+    return this.orderService.getOrderDetail(id, user.id, user.role);
   }
 }

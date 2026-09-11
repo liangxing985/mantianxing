@@ -34,6 +34,7 @@ export class AdminService {
       totalOrders,
       todayOrders,
       totalRevenue,
+      platformRevenue,
       pendingReviews,
       pendingWithdraws,
     ] = await Promise.all([
@@ -47,6 +48,10 @@ export class AdminService {
         _sum: { amount: true },
         where: { type: 'CONSUME' },
       }),
+      this.prisma.order.aggregate({
+        _sum: { platformFee: true },
+        where: { status: 'COMPLETED' },
+      }),
       this.prisma.order.count({ where: { status: 'REVIEWING' } }),
       this.prisma.withdraw.count({ where: { status: 'PENDING' } }),
     ]);
@@ -57,6 +62,7 @@ export class AdminService {
       totalOrders,
       todayOrders,
       totalRevenue: Math.abs(totalRevenue._sum.amount || 0),
+      platformRevenue: platformRevenue._sum.platformFee || 0,
       pendingReviews,
       pendingWithdraws,
     };
@@ -281,19 +287,16 @@ export class AdminService {
         });
       }
 
-      // 老板流水（消费记录）
-      const customerWallet = await tx.wallet.findUnique({ where: { userId: order.customerId } });
-      await tx.walletTransaction.create({
-        data: {
-          walletId: customerWallet.id,
-          userId: order.customerId,
-          type: 'CONSUME',
-          amount: -order.totalAmount,
-          balanceAfter: customerWallet.balance,
-          orderId,
-          remark: `订单消费：${order.orderNo}`,
-        },
+      // 老板流水：将下单时的FROZEN流水转为CONSUME（避免重复扣款）
+      const frozenTx = await tx.walletTransaction.findFirst({
+        where: { orderId, type: 'FROZEN', userId: order.customerId },
       });
+      if (frozenTx) {
+        await tx.walletTransaction.update({
+          where: { id: frozenTx.id },
+          data: { type: 'CONSUME', remark: `订单消费：${order.orderNo}` },
+        });
+      }
 
       // 解冻老板冻结
       await tx.wallet.update({

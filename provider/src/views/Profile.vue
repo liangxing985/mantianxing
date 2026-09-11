@@ -17,11 +17,15 @@
         <van-switch :model-value="profile?.acceptOrder" @update:model-value="(v: any) => profile && (profile.acceptOrder = v)" @change="toggleAccept" />
       </div>
     </div>
-    <div v-if="profile?.games?.length" class="game-section">
-      <div class="game-title">可接游戏</div>
-      <div class="game-tags">
+    <div class="game-section">
+      <div class="game-header">
+        <div class="game-title">可接游戏</div>
+        <div class="game-edit" @click="router.push('/my-games')">设置</div>
+      </div>
+      <div v-if="profile?.games?.length" class="game-tags">
         <van-tag v-for="g in profile.games" :key="g.id" plain type="primary" size="medium">{{ g.game?.name }}</van-tag>
       </div>
+      <div v-else class="game-empty">暂未设置可接游戏，点击右上角设置</div>
     </div>
     <van-cell-group inset style="margin-top: 12px;">
       <van-cell title="服务定价" is-link to="/services" icon="gold-coin-o" />
@@ -88,6 +92,9 @@ onMounted(loadData)
 .status-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f5f5f5; }
 .status-item:last-child { border-bottom: none; }
 .game-section { background: #fff; margin: 12px; border-radius: 12px; padding: 16px; }
-.game-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #333; }
+.game-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.game-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 0; }
+.game-edit { font-size: 13px; color: #1989fa; }
 .game-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.game-empty { font-size: 13px; color: #999; }
 </style>

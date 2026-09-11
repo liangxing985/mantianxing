@@ -39,6 +39,16 @@ export const getMessages = (params: any) => request.get('/message/list', { param
 // 公开配置
 export const getPublicConfig = () => request.get('/system-config/public/theme')
 
+// 游戏列表
+export const getGameList = () => request.get('/game/list')
+
+// 段位定价（公开）
+export const getPricingByRank = (rank: string) => request.get(`/pricing/public/rank/${encodeURIComponent(rank)}`)
+
+// 我的可接游戏
+export const getMyGames = () => request.get('/provider/my/games')
+export const setMyGames = (gameIds: number[]) => request.put('/provider/my/games', { gameIds })
+
 // 上传图片
 export const uploadImage = (file: File) => {
   const formData = new FormData()

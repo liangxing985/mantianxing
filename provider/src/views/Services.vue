@@ -31,7 +31,7 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { getMyProfile } from '@/api'
+import { getMyProfile, getPricingByRank } from '@/api'
 
 const profile = ref<any>(null)
 const priceList = ref<any[]>([])
@@ -44,7 +44,7 @@ const loadData = async () => {
     // 根据段位获取定价
     const rank = profile.value?.rank
     if (rank) {
-      const pricingRes: any = await fetch(`/api/pricing/public/rank/${encodeURIComponent(rank)}`).then(r => r.json())
+      const pricingRes: any = await getPricingByRank(rank)
       priceList.value = pricingRes.data || pricingRes || []
     }
   } catch (e) {}
