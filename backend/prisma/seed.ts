@@ -38,6 +38,22 @@ async function main() {
   });
   console.log('✅ 客服账号: kefu001 / operator123');
 
+  // ==================== 2.1 创建平台钱包账户 ====================
+  const platformPassword = await bcrypt.hash('platform_wallet_2026', 10);
+  await prisma.user.upsert({
+    where: { username: 'platform' },
+    update: {},
+    create: {
+      username: 'platform',
+      password: platformPassword,
+      nickname: '平台钱包',
+      role: Role.ADMIN,
+      isVerified: true,
+      wallet: { create: {} },
+    },
+  });
+  console.log('✅ 平台钱包账户已创建');
+
   // ==================== 3. 创建游戏类目 ====================
   const games = [
     { name: '王者荣耀', icon: '', sortOrder: 1 },
@@ -171,10 +187,10 @@ async function main() {
     { key: 'platform_name', value: '漫天星电竞', description: '平台名称' },
     { key: 'coin_name', value: '星石', description: '虚拟币名称' },
     { key: 'coin_exchange_rate', value: '10', description: '兑换比例（1元=多少星石）' },
-    { key: 'platform_fee_rate', value: '0.2', description: '平台抽成比例' },
+    { key: 'platform_fee_rate', value: '20', description: '平台抽成比例（%）' },
     { key: 'min_withdraw', value: '100', description: '最低提现星石数' },
-    { key: 'withdraw_fee_rate', value: '0.05', description: '提现手续费比例' },
-    { key: 'order_expire_minutes', value: '120', description: '订单过期时间（分钟）' },
+    { key: 'withdraw_fee_rate', value: '5', description: '提现手续费比例（%）' },
+    { key: 'order_expire_hours', value: '2', description: '订单过期时间（小时）' },
   ];
 
   for (const cfg of configs) {

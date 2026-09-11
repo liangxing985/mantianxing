@@ -273,6 +273,32 @@ export class AdminService {
         },
       });
 
+      // 平台抽成入账到平台钱包
+      const platformUser = await tx.user.findUnique({ where: { username: 'platform' } });
+      if (platformUser && platformFee > 0) {
+        const platformWallet = await tx.wallet.findUnique({ where: { userId: platformUser.id } });
+        if (platformWallet) {
+          await tx.wallet.update({
+            where: { userId: platformUser.id },
+            data: {
+              balance: { increment: platformFee },
+              totalIncome: { increment: platformFee },
+            },
+          });
+          await tx.walletTransaction.create({
+            data: {
+              walletId: platformWallet.id,
+              userId: platformUser.id,
+              type: 'INCOME',
+              amount: platformFee,
+              balanceAfter: platformWallet.balance + platformFee,
+              orderId,
+              remark: `平台抽成收入：${order.orderNo}`,
+            },
+          });
+        }
+      }
+
       // 更新陪玩订单数和等级（根据接单量自动升级）
       const updatedProfile = await tx.providerProfile.update({
         where: { userId: order.providerId! },
