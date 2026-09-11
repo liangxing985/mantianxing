@@ -499,4 +499,25 @@ export class AdminService {
   async deleteServiceItem(itemId: number) {
     return this.prisma.serviceItem.delete({ where: { id: itemId } });
   }
+
+  // ==================== 陪玩游戏审核 ====================
+  async getPendingGameApprovals() {
+    return this.prisma.providerGame.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        game: true,
+        providerProfile: {
+          include: { user: { select: { id: true, nickname: true, avatar: true, username: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async approveProviderGame(id: number, status: 'APPROVED' | 'REJECTED') {
+    return this.prisma.providerGame.update({
+      where: { id },
+      data: { status },
+    });
+  }
 }

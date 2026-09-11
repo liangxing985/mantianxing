@@ -96,6 +96,7 @@ const menuList = [
   { path: '/order-review', title: '报单审核', icon: 'Checked' },
   { path: '/withdraw', title: '提现审核', icon: 'Money' },
   { path: '/games', title: '游戏管理', icon: 'Game' },
+  { path: '/game-approvals', title: '游戏审核', icon: 'Checked' },
   { path: '/pricing', title: '定价管理', icon: 'Money' },
   { path: '/settings', title: '系统设置', icon: 'Setting' },
 ]

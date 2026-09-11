@@ -264,6 +264,17 @@ export class OrderService {
       throw new BadRequestException('您已关闭接单');
     }
 
+    // 检查陪玩是否有该游戏权限且已审核通过
+    const orderCheck = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (orderCheck?.gameId) {
+      const providerGame = await this.prisma.providerGame.findFirst({
+        where: { providerId: profile.id, gameId: orderCheck.gameId, status: 'APPROVED' },
+      });
+      if (!providerGame) {
+        throw new BadRequestException('您未开通该游戏或游戏待审核中');
+      }
+    }
+
     // Redis分布式锁
     const lockKey = `order:grab:${orderId}`;
     const lockValue = uuidv4();

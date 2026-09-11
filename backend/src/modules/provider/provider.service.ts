@@ -487,20 +487,37 @@ export class ProviderService {
       include: { games: { include: { game: true } } },
     });
     if (!profile) throw new NotFoundException('陪玩资料不存在');
-    return profile.games.map((pg: any) => pg.game);
+    return profile.games.map((pg: any) => ({ ...pg.game, status: pg.status }));
   }
 
-  // 设置陪玩游戏（通过userId）
+  // 设置陪玩游戏（通过userId）- 新增的游戏需要审核
   async setProviderGames(userId: number, gameIds: number[]) {
     const profile = await this.prisma.providerProfile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('陪玩资料不存在');
-    await this.prisma.providerGame.deleteMany({ where: { providerId: profile.id } });
-    if (gameIds.length > 0) {
-      await this.prisma.providerGame.createMany({
-        data: gameIds.map((gameId) => ({ providerId: profile.id, gameId })),
+    
+    // 获取现有游戏
+    const existing = await this.prisma.providerGame.findMany({
+      where: { providerId: profile.id },
+    });
+    const existingIds = existing.map(e => e.gameId);
+    
+    // 删除取消勾选的游戏
+    const toRemove = existingIds.filter(id => !gameIds.includes(id));
+    if (toRemove.length > 0) {
+      await this.prisma.providerGame.deleteMany({
+        where: { providerId: profile.id, gameId: { in: toRemove } },
       });
     }
-    return { success: true, count: gameIds.length };
+    
+    // 新增的游戏状态为PENDING
+    const toAdd = gameIds.filter(id => !existingIds.includes(id));
+    if (toAdd.length > 0) {
+      await this.prisma.providerGame.createMany({
+        data: toAdd.map((gameId) => ({ providerId: profile.id, gameId, status: 'PENDING' })),
+      });
+    }
+    
+    return { success: true, count: gameIds.length, pendingCount: toAdd.length };
   }
 
   // 获取陪玩游戏（通过userId，管理端用）
@@ -514,10 +531,10 @@ export class ProviderService {
       where: { providerId: user.providerProfile.id },
       include: { game: true },
     });
-    return games.map((pg: any) => pg.game);
+    return games.map((pg: any) => ({ ...pg.game, status: pg.status }));
   }
 
-  // 设置陪玩游戏（通过userId，管理端用）
+  // 设置陪玩游戏（通过userId，管理端用）- 管理端直接通过
   async setProviderGamesByProfileId(userId: number, gameIds: number[]) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -528,9 +545,31 @@ export class ProviderService {
     await this.prisma.providerGame.deleteMany({ where: { providerId: profileId } });
     if (gameIds.length > 0) {
       await this.prisma.providerGame.createMany({
-        data: gameIds.map((gameId) => ({ providerId: profileId, gameId })),
+        data: gameIds.map((gameId) => ({ providerId: profileId, gameId, status: 'APPROVED' })),
       });
     }
     return { success: true, count: gameIds.length };
+  }
+
+  // 获取待审核的游戏申请
+  async getPendingGameApprovals() {
+    return this.prisma.providerGame.findMany({
+      where: { status: 'PENDING' },
+      include: {
+        game: true,
+        providerProfile: {
+          include: { user: { select: { id: true, nickname: true, avatar: true, username: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // 审核游戏申请
+  async approveProviderGame(id: number, status: 'APPROVED' | 'REJECTED') {
+    return this.prisma.providerGame.update({
+      where: { id },
+      data: { status },
+    });
   }
 }

@@ -87,6 +87,7 @@ model ProviderGame {
   providerProfile ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
   gameId          Int
   game            Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  status          String   @default("APPROVED") // PENDING / APPROVED / REJECTED
   createdAt       DateTime @default(now())
 
   @@unique([providerId, gameId])

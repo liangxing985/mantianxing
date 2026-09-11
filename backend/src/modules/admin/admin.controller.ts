@@ -116,4 +116,15 @@ export class AdminController {
   async deleteServiceItem(@Param('id') id: number) {
     return this.adminService.deleteServiceItem(id);
   }
+
+  // ==================== 陪玩游戏审核 ====================
+  @Get('game-approvals')
+  async getPendingGameApprovals() {
+    return this.adminService.getPendingGameApprovals();
+  }
+
+  @Put('game-approvals/:id')
+  async approveProviderGame(@Param('id') id: number, @Body() body: { status: 'APPROVED' | 'REJECTED' }) {
+    return this.adminService.approveProviderGame(id, body.status);
+  }
 }

@@ -72,6 +72,12 @@ const routes = [
         meta: { title: '游戏管理', icon: 'Game' },
       },
       {
+        path: 'game-approvals',
+        name: 'GameApprovals',
+        component: () => import('@/views/GameApproval.vue'),
+        meta: { title: '游戏审核', icon: 'Checked' },
+      },
+      {
         path: 'pricing',
         name: 'Pricing',
         component: () => import('@/views/PricingManage.vue'),
