@@ -204,7 +204,7 @@ export class KookService implements OnModuleDestroy {
     const customerName = order.customer?.nickname || '匿名老板';
     const unit = order.unit === 'hour' ? '小时' : order.unit === 'game' ? '局' : '段';
 
-    return CardBuilder.fromTemplate()
+    const cardJson = CardBuilder.fromTemplate()
       .size('lg')
       .theme('info')
       .color('#6c5ce7')
@@ -225,6 +225,25 @@ export class KookService implements OnModuleDestroy {
         },
       ])
       .build();
+
+    // 修复：给按钮添加 click: 'return-val' 属性，否则点击不触发事件
+    try {
+      const card = JSON.parse(cardJson);
+      if (Array.isArray(card) && card[0]?.modules) {
+        for (const module of card[0].modules) {
+          if (module.type === 'action-group' && Array.isArray(module.elements)) {
+            for (const btn of module.elements) {
+              if (btn.type === 'button') {
+                btn.click = 'return-val';
+              }
+            }
+          }
+        }
+      }
+      return JSON.stringify(card);
+    } catch {
+      return cardJson;
+    }
   }
 
   /** 构建已接单卡片 */
