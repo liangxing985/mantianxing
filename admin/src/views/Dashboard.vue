@@ -119,6 +119,7 @@ const data = ref({
   todayOrders: 0,
   totalRevenue: 0,
   platformRevenue: 0,
+  platformBalance: 0,
   pendingReviews: 0,
   pendingWithdraws: 0,
 })
@@ -152,9 +153,9 @@ const stats = computed(() => [
     className: 'stat-orange'
   },
   { 
-    label: '平台流水', 
-    value: (data.value.totalRevenue / 10).toFixed(0) + '元', 
-    sub: '累计消费星石', 
+    label: '平台收入', 
+    value: data.value.platformBalance + ' 星石', 
+    sub: `累计抽成 ${data.value.platformRevenue} 星石`, 
     icon: '💰',
     className: 'stat-red'
   },

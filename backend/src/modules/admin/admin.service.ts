@@ -37,6 +37,7 @@ export class AdminService {
       platformRevenue,
       pendingReviews,
       pendingWithdraws,
+      platformWallet,
     ] = await Promise.all([
       this.prisma.user.count({ where: { role: 'CUSTOMER' } }),
       this.prisma.user.count({ where: { role: 'PROVIDER' } }),
@@ -54,6 +55,10 @@ export class AdminService {
       }),
       this.prisma.order.count({ where: { status: 'REVIEWING' } }),
       this.prisma.withdraw.count({ where: { status: 'PENDING' } }),
+      this.prisma.user.findUnique({
+        where: { username: 'platform' },
+        include: { wallet: true },
+      }),
     ]);
 
     return {
@@ -63,6 +68,7 @@ export class AdminService {
       todayOrders,
       totalRevenue: Math.abs(totalRevenue._sum.amount || 0),
       platformRevenue: platformRevenue._sum.platformFee || 0,
+      platformBalance: platformWallet?.wallet?.balance || 0,
       pendingReviews,
       pendingWithdraws,
     };
