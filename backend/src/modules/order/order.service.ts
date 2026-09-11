@@ -50,7 +50,7 @@ export class OrderService {
       throw new BadRequestException('服务项目不存在或已下架');
     }
 
-    // 如果指定陪玩，获取陪玩该服务的定价
+    // 如果指定陪玩
     let unitPrice = serviceItem.defaultPrice;
     if (data.providerId) {
       // 前端传的是 User.id，需先转为 ProviderProfile.id
@@ -60,27 +60,35 @@ export class OrderService {
       if (!providerProfile) {
         throw new BadRequestException('该陪玩不存在或未入驻');
       }
-
-      const providerService = await this.prisma.providerService.findFirst({
-        where: {
-          providerId: providerProfile.id,
-          serviceItemId: serviceItem.id,
-          isEnabled: true,
-        },
-        include: { providerProfile: true },
-      });
-      if (!providerService) {
-        throw new BadRequestException('该陪玩未开通此服务');
+      if (providerProfile.applyStatus !== 'APPROVED') {
+        throw new BadRequestException('该陪玩资质未通过审核');
       }
-      if (!providerService.providerProfile.acceptOrder) {
+      if (!providerProfile.acceptOrder) {
         throw new BadRequestException('该陪玩暂不接单');
       }
-      unitPrice = providerService.price;
-    }
 
-    // 商品下单时用商品价格覆盖
-    if (data.overridePrice && data.overridePrice > 0) {
-      unitPrice = data.overridePrice;
+      // 如果传了overridePrice（陪玩详情页/商品下单），直接使用覆盖价格，不检查providerService
+      if (data.overridePrice && data.overridePrice > 0) {
+        unitPrice = data.overridePrice;
+      } else {
+        // 旧模式：检查陪玩是否开通该服务项目
+        const providerService = await this.prisma.providerService.findFirst({
+          where: {
+            providerId: providerProfile.id,
+            serviceItemId: serviceItem.id,
+            isEnabled: true,
+          },
+        });
+        if (!providerService) {
+          throw new BadRequestException('该陪玩未开通此服务');
+        }
+        unitPrice = providerService.price;
+      }
+    } else {
+      // 未指定陪玩（抢单池），如果有overridePrice则覆盖
+      if (data.overridePrice && data.overridePrice > 0) {
+        unitPrice = data.overridePrice;
+      }
     }
 
     const totalAmount = unitPrice * data.duration;
