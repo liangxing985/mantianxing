@@ -229,19 +229,22 @@ export class KookService implements OnModuleDestroy {
     // 修复：给按钮添加 click: 'return-val' 属性，否则点击不触发事件
     try {
       const card = JSON.parse(cardJson);
+      this.logger.log(`【卡片调试】卡片结构: ${JSON.stringify(card)?.substring(0, 500)}`);
       if (Array.isArray(card) && card[0]?.modules) {
         for (const module of card[0].modules) {
           if (module.type === 'action-group' && Array.isArray(module.elements)) {
             for (const btn of module.elements) {
               if (btn.type === 'button') {
                 btn.click = 'return-val';
+                this.logger.log(`【卡片调试】按钮已添加click属性: ${JSON.stringify(btn)}`);
               }
             }
           }
         }
       }
       return JSON.stringify(card);
-    } catch {
+    } catch (e) {
+      this.logger.error('卡片解析失败', e);
       return cardJson;
     }
   }
