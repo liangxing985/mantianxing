@@ -56,7 +56,7 @@ export class AdminService {
       this.prisma.order.count({ where: { status: 'REVIEWING' } }),
       this.prisma.withdraw.count({ where: { status: 'PENDING' } }),
       this.prisma.user.findUnique({
-        where: { username: 'platform' },
+        where: { username: 'admin' },
         include: { wallet: true },
       }),
     ]);
@@ -279,13 +279,13 @@ export class AdminService {
         },
       });
 
-      // 平台抽成入账到平台钱包
-      const platformUser = await tx.user.findUnique({ where: { username: 'platform' } });
-      if (platformUser && platformFee > 0) {
-        const platformWallet = await tx.wallet.findUnique({ where: { userId: platformUser.id } });
-        if (platformWallet) {
+      // 平台抽成入账到超级管理员钱包
+      const adminUser = await tx.user.findUnique({ where: { username: 'admin' } });
+      if (adminUser && platformFee > 0) {
+        const adminWallet = await tx.wallet.findUnique({ where: { userId: adminUser.id } });
+        if (adminWallet) {
           await tx.wallet.update({
-            where: { userId: platformUser.id },
+            where: { userId: adminUser.id },
             data: {
               balance: { increment: platformFee },
               totalIncome: { increment: platformFee },
@@ -293,11 +293,11 @@ export class AdminService {
           });
           await tx.walletTransaction.create({
             data: {
-              walletId: platformWallet.id,
-              userId: platformUser.id,
+              walletId: adminWallet.id,
+              userId: adminUser.id,
               type: 'INCOME',
               amount: platformFee,
-              balanceAfter: platformWallet.balance + platformFee,
+              balanceAfter: adminWallet.balance + platformFee,
               orderId,
               remark: `平台抽成收入：${order.orderNo}`,
             },
