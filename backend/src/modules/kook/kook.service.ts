@@ -8,53 +8,39 @@ export class KookService implements OnModuleDestroy {
   private readonly logger = new Logger(KookService.name);
   private client: KookClient | null = null;
   private connected = false;
+  private reconnectTimer: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
   ) {}
 
-  /** 初始化 Kook HTTP 客户端（webhook模式下使用，不建立WebSocket连接） */
-  async initHttpClient() {
-    const token = process.env.KOOK_BOT_TOKEN;
-    if (!token) return;
-
-    try {
-      this.client = new KookClient({ botToken: token, compression: false } as any);
-      this.connected = true; // 标记为已连接，允许发送HTTP API请求
-      this.logger.log('✅ Kook HTTP 客户端已初始化（webhook模式）');
-    } catch (e) {
-      this.logger.error('初始化 Kook HTTP 客户端失败', e);
-    }
-  }
-
-  /** 连接 Kook WebSocket */
+  /** 连接 Kook WebSocket（带自动重连） */
   async connect() {
     if (this.connected) return;
     const token = process.env.KOOK_BOT_TOKEN;
     if (!token) return;
 
     try {
-      // 关闭压缩，减少连接问题
       this.client = new KookClient({ botToken: token, compression: false } as any);
 
-      // 调试：监听所有事件
+      // 监听所有事件（统一处理按钮点击）
       (this.client as any).on('event', (event: any) => {
-        const eventType = event?.type || event?.extra?.type || 'unknown';
-        this.logger.log(`[Kook事件] type=${eventType}, content=${JSON.stringify(event)?.substring(0, 300)}`);
-
-        // 直接在通用事件中处理按钮点击
         const extra = event?.extra || {};
+        const eventType = event?.type || extra?.type || 'unknown';
+
+        // 按钮点击事件
         if (extra.type === 'message_btn_click' || eventType === 'message_btn_click') {
           const body = extra.body || {};
           const kookUserId = body.user_id || event?.user_id;
           const value = body.value || event?.value;
           const msgId = body.msg_id || event?.msg_id;
 
+          this.logger.log(`【按钮点击】用户=${kookUserId}, value=${value}`);
+
           if (value && String(value).startsWith('grab:')) {
             const orderId = parseInt(String(value).split(':')[1], 10);
             if (orderId) {
-              this.logger.log(`按钮抢单: 用户=${kookUserId}, 订单=${orderId}`);
               this.handleGrabOrder(kookUserId, orderId, msgId).catch(e =>
                 this.logger.error('抢单失败', e)
               );
@@ -70,80 +56,29 @@ export class KookService implements OnModuleDestroy {
         );
       });
 
-      // 监听按钮点击事件（Kook SDK 标准事件名）
-      (this.client as any).on('messageBtnClick', (event: any) => {
-        this.logger.log('收到按钮点击事件:', JSON.stringify(event)?.substring(0, 200));
-        this.handleButtonClick(event).catch((e) =>
-          this.logger.error('处理按钮点击失败', e),
-        );
-      });
-
-      // 监听系统事件（兼容旧版本SDK）
-      (this.client as any).on('systemEvent', (event: any) => {
-        this.logger.log('收到系统事件:', JSON.stringify(event)?.substring(0, 200));
-        this.handleSystemEvent(event).catch((e) =>
-          this.logger.error('处理系统事件失败', e),
-        );
+      // 监听断开连接，自动重连
+      (this.client as any).on('disconnect', () => {
+        this.logger.warn('Kook WebSocket 断开，5秒后重连...');
+        this.connected = false;
+        this.scheduleReconnect();
       });
 
       await this.client.connect();
       this.connected = true;
-      this.logger.log('✅ Kook 机器人已连接');
-
-      // 延迟2秒后监听原始 WebSocket 消息，确保连接完全建立
-      setTimeout(() => {
-        try {
-          const clientAny = this.client as any;
-          this.logger.log(`client keys: ${Object.keys(clientAny).join(',')}`);
-          this.logger.log(`ws exists: ${!!clientAny.ws}`);
-
-          const ws = clientAny.ws;
-          if (ws) {
-            this.logger.log(`ws keys: ${Object.keys(ws).join(',')}`);
-            this.logger.log(`webSocket exists: ${!!ws.webSocket}`);
-
-            if (ws.webSocket) {
-              ws.webSocket.on('message', (data: any) => {
-                try {
-                  const msg = JSON.parse(data.toString());
-                  if (msg?.s === 0 && msg?.d) {
-                    const eventType = msg.d?.type;
-                    const extraType = msg.d?.extra?.type;
-                    if (extraType === 'message_btn_click' || eventType === 255) {
-                      this.logger.log(`[原始WS] type=${eventType}, extraType=${extraType}, sn=${msg.sn}, data=${JSON.stringify(msg.d)?.substring(0, 300)}`);
-                    }
-
-                    if (extraType === 'message_btn_click') {
-                      const body = msg.d.extra.body || {};
-                      const kookUserId = body.user_id;
-                      const value = body.value;
-                      const msgId = body.msg_id;
-                      this.logger.log(`[按钮点击] 用户=${kookUserId}, value=${value}`);
-
-                      if (value && String(value).startsWith('grab:')) {
-                        const orderId = parseInt(String(value).split(':')[1], 10);
-                        if (orderId) {
-                          this.handleGrabOrder(kookUserId, orderId, msgId).catch(e =>
-                            this.logger.error('抢单失败', e)
-                          );
-                        }
-                      }
-                    }
-                  }
-                } catch (e) {
-                  // 忽略
-                }
-              });
-              this.logger.log('✅ 已监听原始 WebSocket 消息');
-            }
-          }
-        } catch (e) {
-          this.logger.warn('无法监听原始 WebSocket', e);
-        }
-      }, 2000);
+      this.logger.log('✅ Kook 机器人已连接（WebSocket模式）');
     } catch (e) {
-      this.logger.error('Kook 机器人连接失败', e);
+      this.logger.error('Kook 连接失败，5秒后重连...', e);
+      this.connected = false;
+      this.scheduleReconnect();
     }
+  }
+
+  /** 定时重连 */
+  private scheduleReconnect() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = setTimeout(() => {
+      this.connect();
+    }, 5000);
   }
 
   /** 发送抢单卡片到指定频道 */
@@ -158,18 +93,17 @@ export class KookService implements OnModuleDestroy {
     try {
       const card = this.buildOrderCard(order);
       const res: any = await this.client.api.createMessage({
-        type: 10, // 卡片消息
+        type: 10,
         target_id: channelId,
         content: card,
       });
 
-      // 记录消息ID，用于后续更新卡片
       const msgId = res?.data?.msg_id || res?.msg_id;
       if (msgId) {
         await this.redis.set(
           `kook:msg:${order.id}`,
           JSON.stringify({ msgId, channelId }),
-          86400 * 7, // 保留7天
+          86400 * 7,
         );
       }
       this.logger.log(`📢 订单 ${order.orderNo} 已推送到 Kook 抢单频道`);
@@ -236,9 +170,7 @@ export class KookService implements OnModuleDestroy {
       },
     ];
 
-    const cardJson = JSON.stringify(card);
-    this.logger.log(`【卡片调试】按钮click属性: ${JSON.stringify(card[0].modules[card[0].modules.length - 1].elements[0])}`);
-    return cardJson;
+    return JSON.stringify(card);
   }
 
   /** 构建已接单卡片 */
@@ -287,26 +219,20 @@ export class KookService implements OnModuleDestroy {
       return;
     }
 
-    // /抢单 订单号（支持数字ID或订单号）
+    // /抢单 订单号
     const grabMatch = content.match(/^\/抢单\s+(\S+)/);
     if (grabMatch) {
       const orderInput = grabMatch[1];
-      this.logger.log(`文字抢单: 用户=${userId}, 输入=${orderInput}`);
-
-      // 先尝试按数字ID查找
       let orderId = parseInt(orderInput, 10);
       if (isNaN(orderId)) {
-        // 如果不是数字，按订单号查找
         const order = await this.prisma.order.findUnique({ where: { orderNo: orderInput } });
         if (order) orderId = order.id;
       }
-
       if (orderId) {
         await this.handleGrabOrder(userId, orderId, null);
       } else {
         await this.reply(channelId, '❌ 订单不存在，请检查订单号');
       }
-      return;
     }
   }
 
@@ -376,38 +302,9 @@ export class KookService implements OnModuleDestroy {
     );
   }
 
-  /** 处理按钮点击事件（新版SDK） */
-  private async handleButtonClick(event: any) {
-    const extra = event?.extra || event?.body || event;
-    const { user_id: kookUserId, value, msg_id: msgId } = extra || {};
-
-    if (!value || !String(value).startsWith('grab:')) return;
-
-    const orderId = parseInt(String(value).split(':')[1], 10);
-    if (!orderId) return;
-
-    this.logger.log(`用户 ${kookUserId} 点击抢单按钮，订单ID: ${orderId}`);
-    await this.handleGrabOrder(kookUserId, orderId, msgId);
-  }
-
-  /** 处理系统事件（按钮点击抢单） */
-  private async handleSystemEvent(event: any) {
-    const extra = event?.extra || event;
-    if (extra?.type !== 'message_btn_click') return;
-
-    const { user_id: kookUserId, value, msg_id: msgId } = extra.body || {};
-    if (!value || !value.startsWith('grab:')) return;
-
-    const orderId = parseInt(value.split(':')[1], 10);
-    if (!orderId) return;
-
-    await this.handleGrabOrder(kookUserId, orderId, msgId);
-  }
-
-  /** Kook 端抢单逻辑（与 H5 共享 Redis 分布式锁） */
+  /** Kook 端抢单逻辑 */
   async handleGrabOrder(kookUserId: string, orderId: number, msgId: string) {
     try {
-      // 1. 查找绑定的平台用户
       const user = await this.prisma.user.findUnique({
         where: { kookId: kookUserId },
         include: { providerProfile: true },
@@ -428,7 +325,6 @@ export class KookService implements OnModuleDestroy {
         return;
       }
 
-      // 2. Redis 分布式锁抢单（和 H5 端同一把锁）
       const lockKey = `order:grab:${orderId}`;
       const locked = await this.redis.lock(lockKey, user.id.toString(), 10);
       if (!locked) {
@@ -437,7 +333,6 @@ export class KookService implements OnModuleDestroy {
       }
 
       try {
-        // 3. 检查订单状态
         const order = await this.prisma.order.findUnique({
           where: { id: orderId },
           include: { serviceItem: { include: { game: true } }, customer: true },
@@ -448,7 +343,6 @@ export class KookService implements OnModuleDestroy {
           return;
         }
 
-        // 4. 更新订单状态
         await this.prisma.order.update({
           where: { id: orderId },
           data: {
@@ -458,10 +352,8 @@ export class KookService implements OnModuleDestroy {
           },
         });
 
-        // 5. 更新 Kook 卡片为已接单
         await this.updateOrderCard(order, user.nickname);
 
-        // 6. 通知抢单成功
         await this.sendPrivateMessage(
           kookUserId,
           `✅ 抢单成功！\n\n` +
@@ -472,7 +364,6 @@ export class KookService implements OnModuleDestroy {
             `请尽快联系老板开始服务`,
         );
 
-        // 7. 通知老板（如果老板也绑定了Kook）
         if (order.customer?.kookId) {
           await this.sendPrivateMessage(
             order.customer.kookId,
@@ -497,7 +388,7 @@ export class KookService implements OnModuleDestroy {
   private async reply(channelId: string, content: string) {
     if (!this.client) return;
     await this.client.api.createMessage({
-      type: 1, // 纯文本/KMarkdown
+      type: 1,
       target_id: channelId,
       content,
     });
@@ -507,7 +398,6 @@ export class KookService implements OnModuleDestroy {
   private async sendPrivateMessage(userId: string, content: string) {
     if (!this.client) return;
     try {
-      // 先创建私聊会话，再发消息
       const res: any = await this.client.api.request(
         '/api/v3/user-chat/create',
         'POST',
@@ -527,6 +417,7 @@ export class KookService implements OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     if (this.client) {
       this.client.disconnect();
       this.connected = false;
