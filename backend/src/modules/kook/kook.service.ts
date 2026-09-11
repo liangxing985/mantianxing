@@ -14,6 +14,20 @@ export class KookService implements OnModuleDestroy {
     private readonly redis: RedisService,
   ) {}
 
+  /** 初始化 Kook HTTP 客户端（webhook模式下使用，不建立WebSocket连接） */
+  async initHttpClient() {
+    const token = process.env.KOOK_BOT_TOKEN;
+    if (!token) return;
+
+    try {
+      this.client = new KookClient({ botToken: token, compression: false } as any);
+      this.connected = true; // 标记为已连接，允许发送HTTP API请求
+      this.logger.log('✅ Kook HTTP 客户端已初始化（webhook模式）');
+    } catch (e) {
+      this.logger.error('初始化 Kook HTTP 客户端失败', e);
+    }
+  }
+
   /** 连接 Kook WebSocket */
   async connect() {
     if (this.connected) return;
