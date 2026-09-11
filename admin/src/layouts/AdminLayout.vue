@@ -2,9 +2,10 @@
   <el-container class="admin-layout">
     <el-aside :width="collapsed ? '72px' : '240px'" class="sidebar" :class="{ collapsed }">
       <div class="logo">
-        <div class="logo-icon">★</div>
+        <img v-if="platformLogo" :src="platformLogo" class="logo-img" />
+        <div v-else class="logo-icon">★</div>
         <div v-if="!collapsed" class="logo-text">
-          <div class="logo-title">漫天星电竞</div>
+          <div class="logo-title">{{ platformName }}</div>
           <div class="logo-sub">运营管理后台</div>
         </div>
       </div>
@@ -145,11 +146,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { Fold, Expand, ArrowDown, DataAnalysis, User, UserFilled, Avatar, Goods, Promotion, Document, Checked, Money, Box, Setting } from '@element-plus/icons-vue'
-import { getProfile, updateProfile } from '@/api'
+import { getProfile, updateProfile, getSystemConfig } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -157,6 +158,17 @@ const collapsed = ref(false)
 const showProfile = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const profileForm = reactive({ nickname: '', username: '', avatar: '' })
+const platformName = ref('漫天星电竞')
+const platformLogo = ref('')
+
+onMounted(async () => {
+  try {
+    const res: any = await getSystemConfig()
+    const data = res.data || res
+    platformName.value = data.platform_name || '漫天星电竞'
+    platformLogo.value = data.platform_logo || ''
+  } catch (e) {}
+})
 
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title || '')
@@ -271,6 +283,14 @@ const saveProfile = async () => {
   justify-content: center;
   font-size: 20px;
   color: #fff;
+  flex-shrink: 0;
+}
+
+.logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 

@@ -3,8 +3,9 @@
     <!-- 左侧边栏 -->
     <aside class="sidebar">
       <div class="logo">
-        <span class="logo-icon">★</span>
-        <span class="logo-text">漫天星电竞</span>
+        <img v-if="platformLogo" :src="platformLogo" class="logo-img" />
+        <span v-else class="logo-icon">★</span>
+        <span class="logo-text">{{ platformName }}</span>
       </div>
       <div class="user-info">
         <img :src="user?.avatar || defaultAvatar" class="user-avatar" />
@@ -68,7 +69,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { getProfile, getMyProfile, getWallet, toggleOnline as apiToggleOnline, toggleAcceptOrder as apiToggleAcceptOrder } from '@/api'
+import { getProfile, getMyProfile, getWallet, toggleOnline as apiToggleOnline, toggleAcceptOrder as apiToggleAcceptOrder, getPublicConfig } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -76,6 +77,8 @@ const user = ref<any>(null)
 const profile = ref<any>(null)
 const wallet = ref<any>(null)
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
+const platformName = ref('漫天星电竞')
+const platformLogo = ref('')
 
 const menuItems = [
   { path: '/pool', label: '抢单大厅', icon: '🔥' },
@@ -135,7 +138,19 @@ const toggleAccept = async () => {
   }
 }
 
-onMounted(loadData)
+const loadPlatformConfig = async () => {
+  try {
+    const res: any = await getPublicConfig()
+    const data = res.data || res
+    platformName.value = data.platformName || '漫天星电竞'
+    platformLogo.value = data.platformLogo || ''
+  } catch (e) {}
+}
+
+onMounted(() => {
+  loadData()
+  loadPlatformConfig()
+})
 </script>
 
 <style scoped>
@@ -169,6 +184,13 @@ onMounted(loadData)
 .logo-icon {
   font-size: 28px;
   color: #fdcb6e;
+}
+
+.logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
 }
 
 .logo-text {

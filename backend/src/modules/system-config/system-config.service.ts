@@ -3,6 +3,8 @@ import { PrismaService } from '../../database/prisma.service';
 
 // 默认配置
 const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = {
+  platform_name: { value: '漫天星电竞', description: '平台名称' },
+  platform_logo: { value: '', description: '平台Logo图片URL' },
   platform_fee_rate: { value: '20', description: '平台抽成比例（%）' },
   coin_exchange_rate: { value: '10', description: '星石兑换人民币比例（1元=多少星石）' },
   client_theme: {

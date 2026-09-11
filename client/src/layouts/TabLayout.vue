@@ -4,8 +4,9 @@
     <header class="header">
       <div class="header-inner">
         <div class="logo" @click="$router.push('/home')">
-          <span class="logo-icon">★</span>
-          <span class="logo-text">漫天星电竞</span>
+          <img v-if="platformLogo" :src="platformLogo" class="logo-img" />
+          <span v-else class="logo-icon">★</span>
+          <span class="logo-text">{{ platformName }}</span>
         </div>
         <nav class="nav-menu">
           <router-link to="/home" class="nav-item" active-class="active">首页</router-link>
@@ -42,12 +43,14 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { getProfile, getWallet } from '@/api'
+import { getProfile, getWallet, getPublicConfig } from '@/api'
 
 const route = useRoute()
 const userInfo = ref<any>(null)
 const wallet = ref<any>(null)
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
+const platformName = ref('漫天星电竞')
+const platformLogo = ref('')
 
 const loadUser = async () => {
   const token = localStorage.getItem('client_token')
@@ -73,7 +76,19 @@ watch(() => route.path, () => {
   loadUser()
 })
 
-onMounted(loadUser)
+const loadPlatformConfig = async () => {
+  try {
+    const res: any = await getPublicConfig()
+    const data = res.data || res
+    platformName.value = data.platformName || '漫天星电竞'
+    platformLogo.value = data.platformLogo || ''
+  } catch (e) {}
+}
+
+onMounted(() => {
+  loadUser()
+  loadPlatformConfig()
+})
 </script>
 
 <style scoped>
@@ -112,6 +127,13 @@ onMounted(loadUser)
 .logo-icon {
   font-size: 24px;
   color: #6c5ce7;
+}
+
+.logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 6px;
 }
 
 .logo-text {

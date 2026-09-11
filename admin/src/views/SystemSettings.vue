@@ -6,6 +6,26 @@
     </div>
 
     <el-card class="config-card" shadow="never">
+      <template #header><span style="font-weight:600;">平台信息</span></template>
+      <el-form label-width="160px">
+        <el-form-item label="平台名称">
+          <el-input v-model="platformName" placeholder="请输入平台名称" style="max-width:300px;" />
+        </el-form-item>
+        <el-form-item label="平台Logo">
+          <div class="logo-upload" @click="triggerLogoUpload">
+            <img v-if="platformLogo" :src="platformLogo" class="logo-preview" />
+            <div v-else class="logo-placeholder">
+              <el-icon><Plus /></el-icon>
+              <span>上传Logo</span>
+            </div>
+            <input ref="logoInput" type="file" accept="image/*" style="display:none" @change="handleLogoUpload" />
+          </div>
+          <div style="color:#909399;font-size:12px;margin-top:8px;">建议尺寸 200x200px，支持PNG/JPG，将显示在三端顶部</div>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card class="config-card" shadow="never" style="margin-top:16px;">
       <template #header><span style="font-weight:600;">财务配置</span></template>
       <el-form label-width="160px">
         <el-form-item label="平台抽成比例">
@@ -163,9 +183,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { getSystemConfig, updateSystemConfig } from '@/api'
 
 const saving = ref(false)
+const platformName = ref('漫天星电竞')
+const platformLogo = ref('')
+const logoInput = ref<HTMLInputElement | null>(null)
 const feeRate = ref(20)
 const coinRate = ref(10)
 const minWithdraw = ref(100)
@@ -206,6 +230,8 @@ const removeDuration = (idx: number) => { durationOptions.value.splice(idx, 1) }
 const loadConfig = async () => {
   const res: any = await getSystemConfig()
   const data = res.data || res
+  platformName.value = data.platform_name || '漫天星电竞'
+  platformLogo.value = data.platform_logo || ''
   feeRate.value = Number(data.platform_fee_rate) || 20
   coinRate.value = Number(data.coin_exchange_rate) || 10
   minWithdraw.value = Number(data.min_withdraw) || 100
@@ -263,6 +289,8 @@ const saveConfig = async () => {
   saving.value = true
   try {
     const items = [
+      { key: 'platform_name', value: platformName.value },
+      { key: 'platform_logo', value: platformLogo.value },
       { key: 'platform_fee_rate', value: String(feeRate.value) },
       { key: 'coin_exchange_rate', value: String(coinRate.value) },
       { key: 'min_withdraw', value: String(minWithdraw.value) },
@@ -284,6 +312,41 @@ const saveConfig = async () => {
   }
 }
 
+const triggerLogoUpload = () => {
+  logoInput.value?.click()
+}
+
+const handleLogoUpload = async (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片不能超过5MB')
+    return
+  }
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const token = localStorage.getItem('admin_token')
+    const res = await fetch('/api/upload/image', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    const data = await res.json()
+    if (data?.data?.url) {
+      platformLogo.value = data.data.url
+      ElMessage.success('Logo上传成功')
+    } else {
+      ElMessage.error('上传失败')
+    }
+  } catch (err) {
+    ElMessage.error('上传失败')
+  } finally {
+    if (target) target.value = ''
+  }
+}
+
 onMounted(loadConfig)
 </script>
 
@@ -294,4 +357,27 @@ onMounted(loadConfig)
 .theme-preview { display: flex; gap: 12px; align-items: center; }
 .preview-box { width: 60px; height: 36px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
 .preview-bg { border: 1px solid #ddd; color: #333; }
+.logo-upload {
+  width: 100px;
+  height: 100px;
+  border: 2px dashed #dcdfe6;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.logo-upload:hover { border-color: #409eff; }
+.logo-preview { width: 100%; height: 100%; object-fit: contain; }
+.logo-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #909399;
+  font-size: 12px;
+}
+.logo-placeholder .el-icon { font-size: 24px; }
 </style>

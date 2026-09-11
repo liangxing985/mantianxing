@@ -9,7 +9,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class SystemConfigController {
   constructor(private readonly configService: SystemConfigService) {}
 
-  // 公开接口：获取公开配置（主题+财务参数）
+  // 公开接口：获取公开配置（主题+财务参数+平台信息）
   @Get('public/theme')
   async getPublicTheme() {
     const theme = await this.configService.getJSON('client_theme');
@@ -18,7 +18,9 @@ export class SystemConfigController {
     const minWithdraw = await this.configService.getNumber('min_withdraw');
     const withdrawFeeRate = await this.configService.getNumber('withdraw_fee_rate');
     const orderExpireHours = await this.configService.getNumber('order_expire_hours');
-    return { theme, platformFeeRate: feeRate, coinExchangeRate: coinRate, minWithdraw, withdrawFeeRate, orderExpireHours };
+    const platformName = await this.configService.get('platform_name');
+    const platformLogo = await this.configService.get('platform_logo');
+    return { theme, platformFeeRate: feeRate, coinExchangeRate: coinRate, minWithdraw, withdrawFeeRate, orderExpireHours, platformName, platformLogo };
   }
 
   // 管理端：获取所有配置
