@@ -233,7 +233,7 @@ export class KookService implements OnModuleDestroy {
   }
 
   /** 处理频道消息（/绑定 指令） */
-  private async handleChannelMessage(event: any) {
+  async handleChannelMessage(event: any) {
     const content = event?.content || '';
     const userId = event?.author_id || event?.extra?.author?.id;
     const channelId = event?.target_id || event?.extra?.channel_id;
@@ -377,7 +377,7 @@ export class KookService implements OnModuleDestroy {
   }
 
   /** Kook 端抢单逻辑（与 H5 共享 Redis 分布式锁） */
-  private async handleGrabOrder(kookUserId: string, orderId: number, msgId: string) {
+  async handleGrabOrder(kookUserId: string, orderId: number, msgId: string) {
     try {
       // 1. 查找绑定的平台用户
       const user = await this.prisma.user.findUnique({

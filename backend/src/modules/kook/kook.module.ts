@@ -1,7 +1,9 @@
 import { Module, OnModuleInit, Logger } from '@nestjs/common';
 import { KookService } from './kook.service';
+import { KookController } from './kook.controller';
 
 @Module({
+  controllers: [KookController],
   providers: [KookService],
   exports: [KookService],
 })
