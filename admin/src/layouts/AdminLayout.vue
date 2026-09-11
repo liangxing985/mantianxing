@@ -15,9 +15,50 @@
         :collapse-transition="false"
         class="sidebar-menu"
       >
-        <el-menu-item v-for="item in menuList" :key="item.path" :index="item.path">
-          <el-icon><component :is="item.icon" /></el-icon>
-          <template #title>{{ item.title }}</template>
+        <el-menu-item index="/dashboard">
+          <el-icon><DataAnalysis /></el-icon>
+          <template #title>数据概览</template>
+        </el-menu-item>
+
+        <el-sub-menu index="user">
+          <template #title>
+            <el-icon><User /></el-icon>
+            <span>用户管理</span>
+          </template>
+          <el-menu-item index="/users">用户列表</el-menu-item>
+          <el-menu-item index="/providers">陪玩管理</el-menu-item>
+          <el-menu-item index="/provider-apply">陪玩审核</el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="content">
+          <template #title>
+            <el-icon><Goods /></el-icon>
+            <span>内容运营</span>
+          </template>
+          <el-menu-item index="/products">商品管理</el-menu-item>
+          <el-menu-item index="/activities">活动管理</el-menu-item>
+          <el-menu-item index="/games">游戏管理</el-menu-item>
+          <el-menu-item index="/game-approvals">游戏审核</el-menu-item>
+          <el-menu-item index="/pricing">定价管理</el-menu-item>
+        </el-sub-menu>
+
+        <el-sub-menu index="order">
+          <template #title>
+            <el-icon><Document /></el-icon>
+            <span>订单管理</span>
+          </template>
+          <el-menu-item index="/orders">订单列表</el-menu-item>
+          <el-menu-item index="/order-review">报单审核</el-menu-item>
+        </el-sub-menu>
+
+        <el-menu-item index="/withdraw">
+          <el-icon><Money /></el-icon>
+          <template #title>提现审核</template>
+        </el-menu-item>
+
+        <el-menu-item index="/settings">
+          <el-icon><Setting /></el-icon>
+          <template #title>系统设置</template>
         </el-menu-item>
       </el-menu>
       <div class="sidebar-footer" v-if="!collapsed">
@@ -107,7 +148,7 @@
 import { ref, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, DataAnalysis, User, UserFilled, Avatar, Goods, Promotion, Document, Checked, Money, Box, Setting } from '@element-plus/icons-vue'
 import { getProfile, updateProfile } from '@/api'
 
 const route = useRoute()
@@ -116,22 +157,6 @@ const collapsed = ref(false)
 const showProfile = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const profileForm = reactive({ nickname: '', username: '', avatar: '' })
-
-const menuList = [
-  { path: '/dashboard', title: '数据概览', icon: 'DataAnalysis' },
-  { path: '/users', title: '用户管理', icon: 'User' },
-  { path: '/provider-apply', title: '陪玩审核', icon: 'Avatar' },
-  { path: '/providers', title: '陪玩管理', icon: 'UserFilled' },
-  { path: '/products', title: '商品管理', icon: 'Goods' },
-  { path: '/activities', title: '活动管理', icon: 'Promotion' },
-  { path: '/orders', title: '订单管理', icon: 'Document' },
-  { path: '/order-review', title: '报单审核', icon: 'Checked' },
-  { path: '/withdraw', title: '提现审核', icon: 'Money' },
-  { path: '/games', title: '游戏管理', icon: 'Game' },
-  { path: '/game-approvals', title: '游戏审核', icon: 'Checked' },
-  { path: '/pricing', title: '定价管理', icon: 'Money' },
-  { path: '/settings', title: '系统设置', icon: 'Setting' },
-]
 
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title || '')
@@ -293,6 +318,37 @@ const saveProfile = async () => {
 
 :deep(.el-menu-item .el-icon) {
   font-size: 18px;
+}
+
+:deep(.el-sub-menu__title) {
+  height: 48px;
+  line-height: 48px;
+  margin: 2px 12px;
+  border-radius: 8px;
+  color: #a0a3c4 !important;
+  font-size: 14px;
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background: rgba(255,255,255,0.06) !important;
+  color: #fff !important;
+}
+
+:deep(.el-sub-menu.is-active > .el-sub-menu__title) {
+  color: #fff !important;
+}
+
+:deep(.el-menu--inline .el-menu-item) {
+  min-width: auto !important;
+  padding-left: 52px !important;
+  height: 42px;
+  line-height: 42px;
+  margin: 1px 12px;
+  font-size: 13px;
+}
+
+:deep(.el-sub-menu .el-menu--inline) {
+  background: transparent !important;
 }
 
 .sidebar-footer {
