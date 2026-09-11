@@ -57,6 +57,7 @@
             </span>
             <template #dropdown>
               <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人资料</el-dropdown-item>
                 <el-dropdown-item command="logout">退出登录</el-dropdown-item>
               </el-dropdown-menu>
             </template>
@@ -72,18 +73,49 @@
         </router-view>
       </el-main>
     </el-container>
+
+    <!-- 个人资料弹窗 -->
+    <el-dialog v-model="showProfile" title="个人资料" width="420px">
+      <div class="profile-dialog">
+        <div class="avatar-upload-section">
+          <div class="avatar-upload" @click="triggerAvatarUpload">
+            <el-avatar :size="80" :src="profileForm.avatar" class="avatar-preview">
+              {{ profileForm.nickname?.charAt(0) || 'A' }}
+            </el-avatar>
+            <div class="avatar-overlay">点击更换</div>
+            <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+          </div>
+        </div>
+        <el-form label-width="80px">
+          <el-form-item label="昵称">
+            <el-input v-model="profileForm.nickname" placeholder="请输入昵称" />
+          </el-form-item>
+          <el-form-item label="用户名">
+            <el-input v-model="profileForm.username" disabled />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="showProfile = false">取消</el-button>
+        <el-button type="primary" @click="saveProfile">保存</el-button>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { Fold, Expand, ArrowDown } from '@element-plus/icons-vue'
+import { getProfile, updateProfile } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
+const showProfile = ref(false)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const profileForm = reactive({ nickname: '', username: '', avatar: '' })
 
 const menuList = [
   { path: '/dashboard', title: '数据概览', icon: 'DataAnalysis' },
@@ -109,7 +141,7 @@ const roleText = computed(() => {
   return role === 'ADMIN' ? '超级管理员' : role === 'OPERATOR' ? '运营客服' : role
 })
 
-const handleCommand = (command: string) => {
+const handleCommand = async (command: string) => {
   if (command === 'logout') {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {
       type: 'warning',
@@ -120,6 +152,63 @@ const handleCommand = (command: string) => {
       localStorage.removeItem('admin_user')
       router.push('/login')
     }).catch(() => {})
+  } else if (command === 'profile') {
+    try {
+      const res: any = await getProfile()
+      profileForm.nickname = res.nickname || ''
+      profileForm.username = res.username || ''
+      profileForm.avatar = res.avatar || ''
+    } catch (e) {}
+    showProfile.value = true
+  }
+}
+
+const triggerAvatarUpload = () => {
+  avatarInput.value?.click()
+}
+
+const handleAvatarUpload = async (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片不能超过5MB')
+    return
+  }
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const token = localStorage.getItem('admin_token')
+    const res = await fetch('/api/upload/image', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    const data = await res.json()
+    if (data?.data?.url) {
+      profileForm.avatar = data.data.url
+      ElMessage.success('头像上传成功')
+    } else {
+      ElMessage.error('上传失败')
+    }
+  } catch (err) {
+    ElMessage.error('上传失败')
+  } finally {
+    if (target) target.value = ''
+  }
+}
+
+const saveProfile = async () => {
+  try {
+    await updateProfile({ nickname: profileForm.nickname, avatar: profileForm.avatar })
+    const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}')
+    adminUser.nickname = profileForm.nickname
+    adminUser.avatar = profileForm.avatar
+    localStorage.setItem('admin_user', JSON.stringify(adminUser))
+    ElMessage.success('保存成功')
+    showProfile.value = false
+  } catch (e) {
+    ElMessage.error('保存失败')
   }
 }
 </script>
@@ -351,5 +440,41 @@ const handleCommand = (command: string) => {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-8px);
+}
+
+/* 个人资料弹窗 */
+.profile-dialog {
+  text-align: center;
+}
+
+.avatar-upload-section {
+  margin-bottom: 20px;
+}
+
+.avatar-upload {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar-preview {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.avatar-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 0;
+  text-align: center;
 }
 </style>

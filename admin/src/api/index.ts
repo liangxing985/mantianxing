@@ -5,6 +5,7 @@ export const login = (data: { username: string; password: string }) =>
   request.post('/auth/login', data)
 
 export const getProfile = () => request.get('/auth/profile')
+export const updateProfile = (data: any) => request.put('/user/profile', data)
 
 // 数据概览
 export const getDashboard = () => request.get('/admin/dashboard')

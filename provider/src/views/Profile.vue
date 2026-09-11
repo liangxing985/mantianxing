@@ -114,6 +114,14 @@
           <span class="modal-close" @click="showEdit = false">×</span>
         </div>
         <div class="modal-body">
+          <div class="form-group avatar-group">
+            <label class="form-label">头像</label>
+            <div class="avatar-upload" @click="triggerAvatarUpload">
+              <img :src="editForm.avatar || defaultAvatar" class="avatar-preview" />
+              <div class="avatar-overlay">点击更换</div>
+              <input ref="avatarInput" type="file" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+            </div>
+          </div>
           <div class="form-group">
             <label class="form-label">昵称</label>
             <input v-model="editForm.nickname" class="form-input" placeholder="请输入昵称" />
@@ -147,7 +155,43 @@ const user = ref<any>(null)
 const profile = ref<any>(null)
 const showEdit = ref(false)
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
-const editForm = reactive({ nickname: '', phone: '', bio: '' })
+const editForm = reactive({ nickname: '', phone: '', bio: '', avatar: '' })
+const avatarInput = ref<HTMLInputElement | null>(null)
+
+const triggerAvatarUpload = () => {
+  avatarInput.value?.click()
+}
+
+const handleAvatarUpload = async (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('图片不能超过5MB')
+    return
+  }
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    const token = localStorage.getItem('provider_token')
+    const res = await fetch('/api/upload/image', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    const data = await res.json()
+    if (data?.data?.url) {
+      editForm.avatar = data.data.url
+      showToast('头像上传成功')
+    } else {
+      showToast('上传失败')
+    }
+  } catch (err) {
+    showToast('上传失败')
+  } finally {
+    if (target) target.value = ''
+  }
+}
 
 const loadData = async () => {
   const [u, p]: any = await Promise.all([getProfile(), getMyProfile()])
@@ -156,6 +200,7 @@ const loadData = async () => {
   editForm.nickname = u.nickname
   editForm.phone = u.phone || ''
   editForm.bio = u.bio || ''
+  editForm.avatar = u.avatar || ''
 }
 
 const saveProfile = async () => {
@@ -411,4 +456,26 @@ onMounted(loadData)
 }
 
 .modal-footer .btn { flex: 1; }
+
+.avatar-group { text-align: center; margin-bottom: 20px; }
+.avatar-upload {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+}
+.avatar-preview { width: 100%; height: 100%; object-fit: cover; }
+.avatar-overlay {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  font-size: 12px;
+  padding: 4px 0;
+  text-align: center;
+}
 </style>
