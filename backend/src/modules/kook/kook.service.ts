@@ -74,6 +74,47 @@ export class KookService implements OnModuleDestroy {
       await this.client.connect();
       this.connected = true;
       this.logger.log('✅ Kook 机器人已连接');
+
+      // 直接监听原始 WebSocket 消息，确保不遗漏任何事件
+      try {
+        const ws = (this.client as any).ws?.webSocket;
+        if (ws) {
+          ws.on('message', (data: any) => {
+            try {
+              const msg = JSON.parse(data.toString());
+              // s=0 是事件消息
+              if (msg?.s === 0 && msg?.d) {
+                const eventType = msg.d?.type;
+                const extraType = msg.d?.extra?.type;
+                this.logger.log(`[原始WS] type=${eventType}, extraType=${extraType}, sn=${msg.sn}`);
+
+                // 按钮点击事件
+                if (extraType === 'message_btn_click') {
+                  const body = msg.d.extra.body || {};
+                  const kookUserId = body.user_id;
+                  const value = body.value;
+                  const msgId = body.msg_id;
+                  this.logger.log(`[按钮点击] 用户=${kookUserId}, value=${value}, msgId=${msgId}`);
+
+                  if (value && String(value).startsWith('grab:')) {
+                    const orderId = parseInt(String(value).split(':')[1], 10);
+                    if (orderId) {
+                      this.handleGrabOrder(kookUserId, orderId, msgId).catch(e =>
+                        this.logger.error('抢单失败', e)
+                      );
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              // 忽略解析错误
+            }
+          });
+          this.logger.log('已监听原始 WebSocket 消息');
+        }
+      } catch (e) {
+        this.logger.warn('无法监听原始 WebSocket', e);
+      }
     } catch (e) {
       this.logger.error('Kook 机器人连接失败', e);
     }
