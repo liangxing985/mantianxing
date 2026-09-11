@@ -13,9 +13,9 @@
         <template #title>
           <div class="game-title">
             <span>{{ game.name }}</span>
-            <van-tag v-if="getGameStatus(game.id) === 'PENDING'" type="warning" size="mini">审核中</van-tag>
-            <van-tag v-else-if="getGameStatus(game.id) === 'REJECTED'" type="danger" size="mini">已驳回</van-tag>
-            <van-tag v-else-if="getGameStatus(game.id) === 'APPROVED'" type="success" size="mini">已开通</van-tag>
+            <van-tag v-if="getGameStatus(game.id) === 'PENDING'" type="warning">审核中</van-tag>
+            <van-tag v-else-if="getGameStatus(game.id) === 'REJECTED'" type="danger">已驳回</van-tag>
+            <van-tag v-else-if="getGameStatus(game.id) === 'APPROVED'" type="success">已开通</van-tag>
           </div>
         </template>
         <template #right-icon>
