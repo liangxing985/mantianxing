@@ -17,7 +17,7 @@
           <div v-if="userInfo" class="user-info" @click="$router.push('/profile')">
             <img :src="userInfo.avatar || defaultAvatar" class="user-avatar" />
             <span class="user-name">{{ userInfo.nickname }}</span>
-            <span class="user-balance">{{ userInfo.balance || 0 }} 星石</span>
+            <span class="user-balance">{{ wallet?.balance || 0 }} 星石</span>
           </div>
           <button v-else class="login-btn" @click="$router.push('/login')">登录</button>
         </div>
@@ -40,22 +40,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { getProfile } from '@/api'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { getProfile, getWallet } from '@/api'
 
+const route = useRoute()
 const userInfo = ref<any>(null)
+const wallet = ref<any>(null)
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 
 const loadUser = async () => {
   const token = localStorage.getItem('client_token')
-  if (!token) return
+  if (!token) {
+    userInfo.value = null
+    wallet.value = null
+    return
+  }
   try {
-    const res: any = await getProfile()
-    userInfo.value = res
+    const [profileRes, walletRes]: any[] = await Promise.all([
+      getProfile(),
+      getWallet().catch(() => null),
+    ])
+    userInfo.value = profileRes
+    wallet.value = walletRes
   } catch (e) {
     console.error('load user error', e)
   }
 }
+
+// 路由变化时刷新用户信息和余额
+watch(() => route.path, () => {
+  loadUser()
+})
 
 onMounted(loadUser)
 </script>
