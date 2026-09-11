@@ -205,6 +205,15 @@ export class KookService implements OnModuleDestroy {
       await this.sendHelp(channelId);
       return;
     }
+
+    // /抢单 订单号
+    const grabMatch = content.match(/^\/抢单\s+(\d+)/);
+    if (grabMatch) {
+      const orderId = parseInt(grabMatch[1], 10);
+      this.logger.log(`文字抢单: 用户=${userId}, 订单=${orderId}`);
+      await this.handleGrabOrder(userId, orderId, null);
+      return;
+    }
   }
 
   /** 绑定 Kook 用户到平台账号 */
@@ -266,7 +275,8 @@ export class KookService implements OnModuleDestroy {
         `\`/绑定 用户名 密码\` - 绑定平台账号（仅陪玩）\n` +
         `\`/解绑\` - 解除绑定\n\n` +
         `**抢单：**\n` +
-        `在抢单频道点击订单卡片上的「立即抢单」按钮即可\n\n` +
+        `在抢单频道点击订单卡片上的「立即抢单」按钮即可\n` +
+        `或发送 \`/抢单 订单号\` 文字抢单\n\n` +
         `**老板下单：**\n` +
         `请在 H5 网页端下单，订单会自动推送到本频道`,
     );
