@@ -38,7 +38,9 @@ export class KookController {
       const extraType = event?.extra?.type;
       const eventType = event?.type;
 
-      this.logger.log(`Kook事件: type=${eventType}, extraType=${extraType}`);
+      // 调试：打印完整事件内容
+      this.logger.log(`【Kook完整事件】type=${eventType}, extraType=${extraType}`);
+      this.logger.log(`【Kook事件详情】${JSON.stringify(event)?.substring(0, 1000)}`);
 
       // 验证 verify_token
       const expectedToken = process.env.KOOK_VERIFY_TOKEN;
@@ -47,14 +49,20 @@ export class KookController {
         return res.status(403).json({ error: 'invalid verify token' });
       }
 
-      // 按钮点击事件
-      if (extraType === 'message_btn_click') {
-        const btnBody = event.extra.body || {};
-        const kookUserId = btnBody.user_id;
-        const value = btnBody.value;
-        const msgId = btnBody.msg_id;
+      // 按钮点击事件（多种可能的格式）
+      const isButtonClick =
+        extraType === 'message_btn_click' ||
+        eventType === 'message_btn_click' ||
+        event?.extra?.body?.value ||
+        event?.value;
 
-        this.logger.log(`按钮点击: 用户=${kookUserId}, value=${value}`);
+      if (isButtonClick) {
+        const btnBody = event.extra?.body || event.extra || {};
+        const kookUserId = btnBody.user_id || event.author_id || event.user_id;
+        const value = btnBody.value || event.value;
+        const msgId = btnBody.msg_id || event.msg_id;
+
+        this.logger.log(`【按钮点击】用户=${kookUserId}, value=${value}, msgId=${msgId}`);
 
         if (value && String(value).startsWith('grab:')) {
           const orderId = parseInt(String(value).split(':')[1], 10);
