@@ -132,6 +132,11 @@ const onProductClick = (p: any) => {
 }
 
 const getMinPrice = (p: any) => {
+  // 优先使用后端返回的按段位定价最低价格
+  if (p.providerProfile?.minPrice && p.providerProfile.minPrice > 0) {
+    return p.providerProfile.minPrice
+  }
+  // 回退到旧的services价格
   const services = p.providerProfile?.services || []
   if (services.length === 0) return 0
   return Math.min(...services.map((s: any) => s.price))

@@ -97,7 +97,40 @@ export class ProviderService {
       this.prisma.user.count({ where }),
     ]);
 
-    return { list: providers, total, page, pageSize };
+    // 为每个陪玩查询按段位定价的最低价格
+    const listWithPrice = await Promise.all(providers.map(async (p: any) => {
+      const rank = p.providerProfile?.rank;
+      let minPrice = 0;
+      let pricedServices: any[] = [];
+      if (rank) {
+        const pricings = await this.prisma.gamePricing.findMany({
+          where: { rank },
+          include: { game: true },
+        });
+        pricedServices = pricings.map((pg: any) => ({
+          gameId: pg.gameId,
+          gameName: pg.game?.name,
+          price: pg.pricePerHour,
+        }));
+        if (pricings.length > 0) {
+          minPrice = Math.min(...pricings.map((pg: any) => pg.pricePerHour));
+        }
+      }
+      // 兼容旧数据：如果没有段位定价，回退到services最低价格
+      if (minPrice === 0 && p.providerProfile?.services?.length > 0) {
+        minPrice = Math.min(...p.providerProfile.services.map((s: any) => s.price));
+      }
+      return {
+        ...p,
+        providerProfile: {
+          ...p.providerProfile,
+          minPrice,
+          pricedServices,
+        },
+      };
+    }));
+
+    return { list: listWithPrice, total, page, pageSize };
   }
 
   // 陪玩详情
