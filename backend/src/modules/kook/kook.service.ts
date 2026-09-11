@@ -23,6 +23,11 @@ export class KookService implements OnModuleDestroy {
     try {
       this.client = new KookClient({ botToken: token });
 
+      // 调试：监听所有事件
+      (this.client as any).on('event', (event: any) => {
+        this.logger.debug('收到事件:', JSON.stringify(event)?.substring(0, 200));
+      });
+
       // 监听频道消息（处理 /绑定 指令）
       this.client.on('textChannelEvent', (event: any) => {
         this.handleChannelMessage(event).catch((e) =>
@@ -30,8 +35,17 @@ export class KookService implements OnModuleDestroy {
         );
       });
 
-      // 监听系统事件（按钮点击）
-      this.client.on('systemEvent', (event: any) => {
+      // 监听按钮点击事件（Kook SDK 标准事件名）
+      (this.client as any).on('messageBtnClick', (event: any) => {
+        this.logger.log('收到按钮点击事件:', JSON.stringify(event)?.substring(0, 200));
+        this.handleButtonClick(event).catch((e) =>
+          this.logger.error('处理按钮点击失败', e),
+        );
+      });
+
+      // 监听系统事件（兼容旧版本SDK）
+      (this.client as any).on('systemEvent', (event: any) => {
+        this.logger.log('收到系统事件:', JSON.stringify(event)?.substring(0, 200));
         this.handleSystemEvent(event).catch((e) =>
           this.logger.error('处理系统事件失败', e),
         );
@@ -236,6 +250,20 @@ export class KookService implements OnModuleDestroy {
         `**老板下单：**\n` +
         `请在 H5 网页端下单，订单会自动推送到本频道`,
     );
+  }
+
+  /** 处理按钮点击事件（新版SDK） */
+  private async handleButtonClick(event: any) {
+    const extra = event?.extra || event?.body || event;
+    const { user_id: kookUserId, value, msg_id: msgId } = extra || {};
+
+    if (!value || !String(value).startsWith('grab:')) return;
+
+    const orderId = parseInt(String(value).split(':')[1], 10);
+    if (!orderId) return;
+
+    this.logger.log(`用户 ${kookUserId} 点击抢单按钮，订单ID: ${orderId}`);
+    await this.handleGrabOrder(kookUserId, orderId, msgId);
   }
 
   /** 处理系统事件（按钮点击抢单） */
