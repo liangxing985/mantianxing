@@ -472,7 +472,7 @@ export class AdminService {
     unit?: string;
     sortOrder?: number;
   }) {
-    const { gameId, ...rest } = data;
+    const { gameId, id, ...rest } = data as any;
     return this.prisma.serviceItem.create({
       data: {
         ...rest,
@@ -482,7 +482,7 @@ export class AdminService {
   }
 
   async updateServiceItem(itemId: number, data: any) {
-    const { gameId, ...rest } = data;
+    const { gameId, id, ...rest } = data;
     const updateData: any = { ...rest };
     if (gameId) {
       updateData.game = { connect: { id: gameId } };
