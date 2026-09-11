@@ -194,6 +194,7 @@ export class ProviderService {
     avatar?: string;
     bio?: string;
     gender?: string;
+    phone?: string;
     voiceCard?: string;
     introVideo?: string;
   }) {
@@ -202,13 +203,19 @@ export class ProviderService {
     });
     if (!profile) throw new NotFoundException('陪玩资料不存在');
 
-    const { nickname, avatar, bio, gender, ...profileData } = data;
+    const { nickname, avatar, bio, gender, phone, ...profileData } = data;
 
     // 更新用户基本信息
-    if (nickname || avatar || bio || gender) {
+    if (nickname || avatar || bio || gender || phone) {
+      const userData: any = {}
+      if (nickname !== undefined) userData.nickname = nickname
+      if (avatar !== undefined) userData.avatar = avatar
+      if (bio !== undefined) userData.bio = bio
+      if (gender !== undefined) userData.gender = gender as any
+      if (phone !== undefined) userData.phone = phone
       await this.prisma.user.update({
         where: { id: userId },
-        data: { nickname, avatar, bio, gender: gender as any },
+        data: userData,
       });
     }
 
