@@ -206,12 +206,25 @@ export class KookService implements OnModuleDestroy {
       return;
     }
 
-    // /抢单 订单号
-    const grabMatch = content.match(/^\/抢单\s+(\d+)/);
+    // /抢单 订单号（支持数字ID或订单号）
+    const grabMatch = content.match(/^\/抢单\s+(\S+)/);
     if (grabMatch) {
-      const orderId = parseInt(grabMatch[1], 10);
-      this.logger.log(`文字抢单: 用户=${userId}, 订单=${orderId}`);
-      await this.handleGrabOrder(userId, orderId, null);
+      const orderInput = grabMatch[1];
+      this.logger.log(`文字抢单: 用户=${userId}, 输入=${orderInput}`);
+
+      // 先尝试按数字ID查找
+      let orderId = parseInt(orderInput, 10);
+      if (isNaN(orderId)) {
+        // 如果不是数字，按订单号查找
+        const order = await this.prisma.order.findUnique({ where: { orderNo: orderInput } });
+        if (order) orderId = order.id;
+      }
+
+      if (orderId) {
+        await this.handleGrabOrder(userId, orderId, null);
+      } else {
+        await this.reply(channelId, '❌ 订单不存在，请检查订单号');
+      }
       return;
     }
   }
