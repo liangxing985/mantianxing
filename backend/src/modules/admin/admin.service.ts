@@ -457,11 +457,13 @@ export class AdminService {
 
   // ==================== 游戏与服务管理 ====================
   async createGame(data: { name: string; icon?: string; sortOrder?: number }) {
-    return this.prisma.game.create({ data });
+    const { id, ...rest } = data as any;
+    return this.prisma.game.create({ data: rest });
   }
 
   async updateGame(gameId: number, data: any) {
-    return this.prisma.game.update({ where: { id: gameId }, data });
+    const { id, ...rest } = data;
+    return this.prisma.game.update({ where: { id: gameId }, data: rest });
   }
 
   async createServiceItem(data: {
