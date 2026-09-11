@@ -15,7 +15,12 @@ export class KookModule implements OnModuleInit {
   async onModuleInit() {
     // 仅在配置了 Token 时启动机器人
     if (process.env.KOOK_BOT_TOKEN) {
-      await this.kookService.connect();
+      // Webhook 模式下不需要启动 WebSocket 连接
+      if (process.env.KOOK_USE_WEBSOCKET === 'true') {
+        await this.kookService.connect();
+      } else {
+        this.logger.log('Kook 机器人使用 Webhook 模式，不启动 WebSocket 连接');
+      }
     } else {
       this.logger.warn('未配置 KOOK_BOT_TOKEN，Kook 机器人未启动');
     }
