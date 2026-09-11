@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Logger, Headers } from '@nestjs/common';
+import { Controller, Post, Body, Logger, Headers, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { KookService } from './kook.service';
 
 @Controller('kook')
@@ -12,21 +13,20 @@ export class KookController {
    * 用于接收按钮点击等事件推送
    */
   @Post('webhook')
-  async webhook(@Body() body: any, @Headers() headers: any) {
+  async webhook(@Body() body: any, @Headers() headers: any, @Res() res: Response) {
     this.logger.log(`收到Kook webhook: type=${body?.type}, challenge=${body?.challenge ? '有' : '无'}`);
-    this.logger.log(`Headers: ${JSON.stringify(headers)?.substring(0, 200)}`);
 
     // 验证 Verify Token（如果配置了）
     const verifyToken = process.env.KOOK_VERIFY_TOKEN;
     if (verifyToken && body?.verify_token && body.verify_token !== verifyToken) {
-      this.logger.warn(`Verify Token不匹配: ${body.verify_token} !== ${verifyToken}`);
-      return { code: 403, message: 'invalid verify token' };
+      this.logger.warn(`Verify Token不匹配`);
+      return res.status(403).json({ code: 403, message: 'invalid verify token' });
     }
 
-    // URL验证请求（type=1）
+    // URL验证请求（type=1）- 必须直接返回challenge，不能被拦截器包装
     if (body?.type === 1 && body?.challenge) {
       this.logger.log('Kook webhook URL验证成功');
-      return { challenge: body.challenge };
+      return res.json({ challenge: body.challenge });
     }
 
     // 事件推送（type=0）
@@ -65,6 +65,6 @@ export class KookController {
     }
 
     // Kook要求返回200
-    return { code: 0, message: 'success' };
+    return res.json({ code: 0, message: 'success' });
   }
 }
