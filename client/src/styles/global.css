@@ -6,15 +6,35 @@
 
 html, body, #app {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
-  background: #f5f6fa;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+  background: #f0f2f5;
+  color: #1a1a2e;
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 桌面端容器：全宽布局 */
+.app-container {
+  min-height: 100vh;
+  background: #f0f2f5;
 }
 
 .page {
-  min-height: 100vh;
-  padding-bottom: 60px;
+  min-height: calc(100vh - 64px);
+  padding: 24px 0;
 }
 
+/* 通用容器 */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* 主题色 */
 .primary-color {
   color: #6c5ce7;
 }
@@ -23,16 +43,125 @@ html, body, #app {
   background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
 }
 
+/* 卡片 */
 .card {
   background: #fff;
   border-radius: 12px;
-  margin: 12px;
-  padding: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 区块标题 */
 .section-title {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
-  color: #333;
-  margin: 16px 16px 8px;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title .more {
+  font-size: 14px;
+  color: #6c5ce7;
+  font-weight: normal;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.section-title .more:hover {
+  text-decoration: underline;
+}
+
+/* 按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-outline {
+  background: #fff;
+  color: #6c5ce7;
+  border: 1px solid #6c5ce7;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline:hover {
+  background: #f5f3ff;
+}
+
+/* 标签 */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tag-hot {
+  background: #fff1f0;
+  color: #f5222d;
+}
+
+.tag-discount {
+  background: #fff7e6;
+  color: #fa8c16;
+}
+
+.tag-online {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.tag-offline {
+  background: #f5f5f5;
+  color: #999;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }

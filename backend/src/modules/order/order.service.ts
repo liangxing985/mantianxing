@@ -135,12 +135,12 @@ export class OrderService {
           duration: data.duration,
           unitPrice,
           totalAmount,
-          status: data.providerId ? 'ASSIGNED' : 'PAID', // 指定陪玩直接已接单，否则进入抢单池
+          status: 'PAID', // 所有订单都先进入待接单状态，陪玩确认后才变为已接单
           contactType: data.contactType,
           contactValue: data.contactValue,
           gameAccount: data.gameAccount,
-          paidAt: data.providerId ? new Date() : null,
-          acceptedAt: data.providerId ? new Date() : null,
+          paidAt: new Date(),
+          acceptedAt: null, // 陪玩确认接单后才设置
           expireAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2小时过期
         },
         include: {
@@ -226,6 +226,7 @@ export class OrderService {
     const where: any = {
       status: 'PAID', // 待接单
       expireAt: { gt: new Date() }, // 未过期
+      providerId: null, // 抢单池只显示未指定陪玩的订单
     };
 
     if (query.gameId) {
@@ -281,6 +282,10 @@ export class OrderService {
       }
       if (order.expireAt && order.expireAt < new Date()) {
         throw new BadRequestException('订单已过期');
+      }
+      // 如果订单指定了陪玩，只有指定陪玩才能接单
+      if (order.providerId && order.providerId !== providerId) {
+        throw new BadRequestException('该订单已指定其他陪玩');
       }
 
       // 更新订单状态为已接单

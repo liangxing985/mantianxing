@@ -35,7 +35,15 @@ export class WalletService {
   async getTransactions(userId: number, query: any) {
     const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
     const where: any = { userId };
-    if (query.type) where.type = query.type;
+    if (query.type) {
+      // 支持逗号分隔的多个类型，如 "INCOME,WITHDRAW"
+      const types = String(query.type).split(',').map((t: string) => t.trim()).filter(Boolean);
+      if (types.length > 1) {
+        where.type = { in: types };
+      } else {
+        where.type = types[0];
+      }
+    }
 
     const [transactions, total] = await Promise.all([
       this.prisma.walletTransaction.findMany({

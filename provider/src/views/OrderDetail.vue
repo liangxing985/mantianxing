@@ -34,7 +34,10 @@
     </div>
 
     <!-- 底部操作 -->
-    <div class="bottom-bar" v-if="order.status === 'ASSIGNED'">
+    <div class="bottom-bar" v-if="order.status === 'PAID'">
+      <van-button block type="success" @click="handleAccept">接单</van-button>
+    </div>
+    <div class="bottom-bar" v-else-if="order.status === 'ASSIGNED'">
       <van-button block type="primary" @click="handleStart">开始服务</van-button>
     </div>
     <div class="bottom-bar" v-else-if="order.status === 'SERVING'">
@@ -67,8 +70,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { showToast, showSuccessToast } from 'vant'
-import { getOrderDetail, startOrder, submitReport, uploadImage, getPublicConfig } from '@/api'
+import { showToast, showSuccessToast, showConfirmDialog } from 'vant'
+import { getOrderDetail, startOrder, submitReport, uploadImage, getPublicConfig, grabOrder } from '@/api'
 const route = useRoute()
 const order = ref<any>(null)
 const showReport = ref(false)
@@ -127,6 +130,13 @@ const loadData = async () => {
   } catch (e) {}
 }
 
+const handleAccept = async () => {
+  await showConfirmDialog({ title: '确认接单', message: '确定接受该订单吗？' })
+  await grabOrder(order.value.id)
+  showSuccessToast('接单成功')
+  loadData()
+}
+
 const handleStart = async () => {
   await startOrder(order.value.id)
   showSuccessToast('已开始服务')
@@ -141,8 +151,8 @@ const submitReportForm = async () => {
   loadData()
 }
 
-const statusText = (s: string) => ({ ASSIGNED: '待开始服务', SERVING: '服务进行中', REVIEWING: '等待运营审核', COMPLETED: '订单已完成', CANCELLED: '订单已取消' }[s] || s)
-const statusDesc = (s: string) => ({ ASSIGNED: '请尽快联系老板并开始服务', SERVING: '服务完成后请提交报单', REVIEWING: '报单审核中，通过后自动结算', COMPLETED: '收入已到账，继续加油！' }[s] || '')
+const statusText = (s: string) => ({ PAID: '待接单', ASSIGNED: '待开始服务', SERVING: '服务进行中', REVIEWING: '等待运营审核', COMPLETED: '订单已完成', CANCELLED: '订单已取消' }[s] || s)
+const statusDesc = (s: string) => ({ PAID: '老板已下单，请确认接单', ASSIGNED: '请尽快联系老板并开始服务', SERVING: '服务完成后请提交报单', REVIEWING: '报单审核中，通过后自动结算', COMPLETED: '收入已到账，继续加油！' }[s] || '')
 const unitText = (u: string) => ({ hour: '小时', game: '局', package: '段' }[u] || '')
 onMounted(loadData)
 </script>
