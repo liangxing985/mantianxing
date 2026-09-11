@@ -25,7 +25,27 @@ export class KookService implements OnModuleDestroy {
 
       // 调试：监听所有事件
       (this.client as any).on('event', (event: any) => {
-        this.logger.debug('收到事件:', JSON.stringify(event)?.substring(0, 200));
+        const eventType = event?.type || event?.extra?.type || 'unknown';
+        this.logger.log(`[Kook事件] type=${eventType}, content=${JSON.stringify(event)?.substring(0, 300)}`);
+
+        // 直接在通用事件中处理按钮点击
+        const extra = event?.extra || {};
+        if (extra.type === 'message_btn_click' || eventType === 'message_btn_click') {
+          const body = extra.body || {};
+          const kookUserId = body.user_id || event?.user_id;
+          const value = body.value || event?.value;
+          const msgId = body.msg_id || event?.msg_id;
+
+          if (value && String(value).startsWith('grab:')) {
+            const orderId = parseInt(String(value).split(':')[1], 10);
+            if (orderId) {
+              this.logger.log(`按钮抢单: 用户=${kookUserId}, 订单=${orderId}`);
+              this.handleGrabOrder(kookUserId, orderId, msgId).catch(e =>
+                this.logger.error('抢单失败', e)
+              );
+            }
+          }
+        }
       });
 
       // 监听频道消息（处理 /绑定 指令）
