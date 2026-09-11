@@ -472,11 +472,22 @@ export class AdminService {
     unit?: string;
     sortOrder?: number;
   }) {
-    return this.prisma.serviceItem.create({ data });
+    const { gameId, ...rest } = data;
+    return this.prisma.serviceItem.create({
+      data: {
+        ...rest,
+        game: { connect: { id: gameId } },
+      },
+    });
   }
 
   async updateServiceItem(itemId: number, data: any) {
-    return this.prisma.serviceItem.update({ where: { id: itemId }, data });
+    const { gameId, ...rest } = data;
+    const updateData: any = { ...rest };
+    if (gameId) {
+      updateData.game = { connect: { id: gameId } };
+    }
+    return this.prisma.serviceItem.update({ where: { id: itemId }, data: updateData });
   }
 
   async deleteGame(gameId: number) {
