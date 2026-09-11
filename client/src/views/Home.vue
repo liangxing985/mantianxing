@@ -2,42 +2,30 @@
   <div class="home-page">
     <!-- 活动 Banner 轮播 -->
     <div class="banner-section">
-      <van-swipe v-if="activities.length > 0" class="activity-swipe" :autoplay="4000" indicator-color="#fff">
-        <van-swipe-item v-for="act in activities" :key="act.id" @click="onActivityClick(act)">
-          <div class="activity-banner" :style="act.image ? { backgroundImage: `url(${act.image})` } : {}">
+      <van-swipe class="activity-swipe" :autoplay="4000" indicator-color="#fff">
+        <van-swipe-item v-for="(act, idx) in bannerList" :key="idx" @click="onActivityClick(act)">
+          <div class="activity-banner" :style="act.image ? { backgroundImage: `url(${act.image})` } : { background: act.gradient }">
             <div class="activity-overlay">
               <div class="activity-title">{{ act.title }}</div>
               <div v-if="act.content" class="activity-desc">{{ act.content }}</div>
+              <div v-if="act.stats" class="banner-stats">
+                <div class="stat-item">
+                  <span class="stat-num">{{ providerCount }}</span>
+                  <span class="stat-label">认证陪玩</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-num">{{ orderCount }}</span>
+                  <span class="stat-label">完成订单</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-num">4.9</span>
+                  <span class="stat-label">平均评分</span>
+                </div>
+              </div>
             </div>
           </div>
         </van-swipe-item>
       </van-swipe>
-      <!-- 无活动时显示默认横幅 -->
-      <div v-else class="main-banner">
-        <div class="banner-content">
-          <h1>漫天星电竞</h1>
-          <p class="banner-subtitle">专业陪玩 · 技术上分 · 声音好听</p>
-          <div class="banner-stats">
-            <div class="stat-item">
-              <span class="stat-num">{{ providerCount }}</span>
-              <span class="stat-label">认证陪玩</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-num">{{ orderCount }}</span>
-              <span class="stat-label">完成订单</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-num">4.9</span>
-              <span class="stat-label">平均评分</span>
-            </div>
-          </div>
-        </div>
-        <div class="banner-decoration">
-          <div class="deco-star star1">★</div>
-          <div class="deco-star star2">★</div>
-          <div class="deco-star star3">★</div>
-        </div>
-      </div>
     </div>
 
     <div class="container">
@@ -49,6 +37,32 @@
             <div class="game-icon">{{ game.name.charAt(0) }}</div>
             <div class="game-name">{{ game.name }}</div>
             <div v-if="game.category" class="game-category">{{ game.category }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 活动大厅 -->
+      <div v-if="activities.length > 0" class="section">
+        <h2 class="section-title">
+          <span>活动大厅</span>
+          <span class="more">共{{ activities.length }}个活动</span>
+        </h2>
+        <div class="activity-grid">
+          <div v-for="act in activities" :key="act.id" class="activity-card" @click="onActivityClick(act)">
+            <div class="activity-card-img" :style="act.image ? { backgroundImage: `url(${act.image})` } : {}">
+              <span v-if="!act.image" class="activity-card-icon">🎉</span>
+              <span v-if="act.category==='hot'" class="activity-card-tag">热门</span>
+              <span v-else-if="act.category==='discount'" class="activity-card-tag tag-discount">优惠</span>
+              <span v-else-if="act.category==='new'" class="activity-card-tag tag-new">新活动</span>
+            </div>
+            <div class="activity-card-info">
+              <div class="activity-card-title">{{ act.title }}</div>
+              <div v-if="act.content" class="activity-card-desc">{{ act.content }}</div>
+              <div class="activity-card-bottom">
+                <span v-if="act.startTime" class="activity-card-time">{{ formatDate(act.startTime) }} 开始</span>
+                <span class="activity-card-btn">立即参与</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -120,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGameList, getProviderList, getPublicConfig, getProductList, getActivityList } from '@/api'
 
@@ -134,6 +148,21 @@ const providerCount = ref(0)
 const orderCount = ref(0)
 const theme = reactive({ primaryColor: '#6c5ce7', accentColor: '#a29bfe' })
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
+
+// 默认轮播图（无活动时使用）
+const defaultBanners = [
+  { title: '漫天星电竞', content: '专业陪玩 · 技术上分 · 声音好听', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', stats: true },
+  { title: '新用户专享', content: '首单立减，海量陪玩等你来撩', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+  { title: '技术上分', content: '王者大神带你飞，段位蹭蹭涨', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+]
+
+// 轮播图列表：有活动用活动图，无活动用默认渐变图
+const bannerList = computed(() => {
+  if (activities.value.length > 0) {
+    return activities.value.map(a => ({ ...a, gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }))
+  }
+  return defaultBanners
+})
 
 const loadData = async () => {
   try {
@@ -164,6 +193,12 @@ const onActivityClick = (act: any) => {
   if (act.linkUrl) {
     window.open(act.linkUrl, '_blank')
   }
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
 const onProductClick = (p: any) => {
@@ -216,7 +251,7 @@ onMounted(loadData)
 .activity-overlay {
   width: 100%;
   padding: 40px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  background: linear-gradient(transparent, rgba(0,0,0,0.6));
   color: #fff;
 }
 
@@ -229,77 +264,28 @@ onMounted(loadData)
 .activity-desc {
   font-size: 16px;
   opacity: 0.9;
+  margin-bottom: 16px;
 }
 
-/* 默认横幅 */
-.main-banner {
-  height: 320px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  margin: 0 24px;
-  border-radius: 16px;
+.activity-overlay .banner-stats {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 60px;
-  position: relative;
-  overflow: hidden;
+  gap: 40px;
 }
 
-.banner-content {
-  color: #fff;
-  z-index: 1;
-}
-
-.banner-content h1 {
-  font-size: 48px;
-  font-weight: 800;
-  margin-bottom: 12px;
-  letter-spacing: 2px;
-}
-
-.banner-subtitle {
-  font-size: 18px;
-  opacity: 0.9;
-  margin-bottom: 32px;
-}
-
-.banner-stats {
-  display: flex;
-  gap: 48px;
-}
-
-.stat-item {
+.activity-overlay .stat-item {
   display: flex;
   flex-direction: column;
 }
 
-.stat-num {
-  font-size: 32px;
+.activity-overlay .stat-num {
+  font-size: 28px;
   font-weight: 700;
 }
 
-.stat-label {
-  font-size: 14px;
+.activity-overlay .stat-label {
+  font-size: 13px;
   opacity: 0.8;
-  margin-top: 4px;
 }
-
-.banner-decoration {
-  position: absolute;
-  right: 60px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.deco-star {
-  position: absolute;
-  color: rgba(255,255,255,0.15);
-  font-size: 80px;
-}
-
-.star1 { top: -60px; right: 0; font-size: 100px; }
-.star2 { top: 40px; right: 80px; font-size: 60px; }
-.star3 { bottom: -40px; right: 40px; font-size: 70px; }
 
 /* 容器 */
 .container {
@@ -388,6 +374,101 @@ onMounted(loadData)
 .game-category {
   font-size: 12px;
   color: #999;
+}
+
+/* 活动大厅 */
+.activity-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.activity-card {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.activity-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+.activity-card-img {
+  height: 140px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.activity-card-icon {
+  font-size: 48px;
+}
+
+.activity-card-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.activity-card-tag.tag-discount {
+  background: #fa8c16;
+}
+
+.activity-card-tag.tag-new {
+  background: #52c41a;
+}
+
+.activity-card-info {
+  padding: 14px 16px;
+}
+
+.activity-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-card-desc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-card-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.activity-card-btn {
+  font-size: 13px;
+  color: #6c5ce7;
+  font-weight: 500;
 }
 
 /* 商品网格 */
