@@ -117,7 +117,7 @@ export class WalletService {
           type: 'WITHDRAW',
           amount: -amount,
           balanceAfter: updatedWallet.balance,
-          remark: `申请提现${amount}星石`,
+          remark: `申请提现${amount}星石，手续费${fee}星石，实际到账${(realAmount / coinRate).toFixed(2)}元`,
         },
       });
     });
