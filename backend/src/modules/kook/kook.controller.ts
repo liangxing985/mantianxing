@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Logger, Headers, Res } from '@nestjs/common';
+import { Controller, Post, Body, Logger, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { KookService } from './kook.service';
 
@@ -10,45 +10,55 @@ export class KookController {
 
   /**
    * Kook Webhook 回调接口
-   * 用于接收按钮点击等事件推送
+   * 参考文档：https://developer.kookapp.cn/doc/webhook
    */
   @Post('webhook')
-  async webhook(@Body() body: any, @Headers() headers: any, @Res() res: Response) {
-    this.logger.log(`收到Kook webhook: type=${body?.type}, challenge=${body?.challenge ? '有' : '无'}`);
+  async webhook(@Body() body: any, @Res() res: Response) {
+    this.logger.log(`收到Kook webhook: s=${body?.s}, d_type=${body?.d?.type}, channel_type=${body?.d?.channel_type}`);
 
-    // 验证 Verify Token（如果配置了）
-    const verifyToken = process.env.KOOK_VERIFY_TOKEN;
-    if (verifyToken && body?.verify_token && body.verify_token !== verifyToken) {
-      this.logger.warn(`Verify Token不匹配`);
-      return res.status(403).json({ code: 403, message: 'invalid verify token' });
+    // Challenge 验证请求（channel_type = WEBHOOK_CHALLENGE）
+    if (body?.d?.channel_type === 'WEBHOOK_CHALLENGE') {
+      const { challenge, verify_token: verifyToken } = body.d;
+
+      // 验证 verify_token
+      const expectedToken = process.env.KOOK_VERIFY_TOKEN;
+      if (expectedToken && verifyToken && verifyToken !== expectedToken) {
+        this.logger.warn(`Verify Token不匹配: ${verifyToken} !== ${expectedToken}`);
+        return res.status(403).json({ error: 'invalid verify token' });
+      }
+
+      this.logger.log(`Kook webhook Challenge验证成功，challenge=${challenge}`);
+      // 必须在1秒内原样返回 challenge
+      return res.json({ challenge });
     }
 
-    // URL验证请求（type=1）- 必须直接返回challenge，不能被拦截器包装
-    if (body?.type === 1 && body?.challenge) {
-      this.logger.log('Kook webhook URL验证成功');
-      return res.json({ challenge: body.challenge });
-    }
-
-    // 事件推送（type=0）
-    if (body?.type === 0 && body?.d) {
+    // 正常事件推送（s=0）
+    if (body?.s === 0 && body?.d) {
       const event = body.d;
       const extraType = event?.extra?.type;
+      const eventType = event?.type;
 
-      this.logger.log(`Kook事件: type=${event?.type}, extraType=${extraType}`);
+      this.logger.log(`Kook事件: type=${eventType}, extraType=${extraType}`);
+
+      // 验证 verify_token
+      const expectedToken = process.env.KOOK_VERIFY_TOKEN;
+      if (expectedToken && event?.verify_token && event.verify_token !== expectedToken) {
+        this.logger.warn('事件Verify Token不匹配');
+        return res.status(403).json({ error: 'invalid verify token' });
+      }
 
       // 按钮点击事件
       if (extraType === 'message_btn_click') {
-        const bodyData = event.extra.body || {};
-        const kookUserId = bodyData.user_id;
-        const value = bodyData.value;
-        const msgId = bodyData.msg_id;
+        const btnBody = event.extra.body || {};
+        const kookUserId = btnBody.user_id;
+        const value = btnBody.value;
+        const msgId = btnBody.msg_id;
 
         this.logger.log(`按钮点击: 用户=${kookUserId}, value=${value}`);
 
         if (value && String(value).startsWith('grab:')) {
           const orderId = parseInt(String(value).split(':')[1], 10);
           if (orderId) {
-            // 异步处理抢单，不阻塞webhook响应
             this.kookService.handleGrabOrder(kookUserId, orderId, msgId).catch(e =>
               this.logger.error('抢单失败', e)
             );
@@ -57,14 +67,14 @@ export class KookController {
       }
 
       // 频道消息事件（处理 /绑定 等指令）
-      if (event?.type === 1 || event?.type === 9) {
+      if (eventType === 1 || eventType === 9) {
         this.kookService.handleChannelMessage(event).catch(e =>
           this.logger.error('处理频道消息失败', e)
         );
       }
     }
 
-    // Kook要求返回200
+    // 返回200
     return res.json({ code: 0, message: 'success' });
   }
 }
