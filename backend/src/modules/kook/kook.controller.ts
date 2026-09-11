@@ -14,7 +14,8 @@ export class KookController {
    */
   @Post('webhook')
   async webhook(@Body() body: any, @Res() res: Response) {
-    this.logger.log(`收到Kook webhook: s=${body?.s}, d_type=${body?.d?.type}, channel_type=${body?.d?.channel_type}`);
+    // 最开始就打印完整请求体，确保所有请求都能被记录
+    this.logger.log(`【Kook Webhook收到请求】完整内容: ${JSON.stringify(body)?.substring(0, 2000)}`);
 
     // Challenge 验证请求（channel_type = WEBHOOK_CHALLENGE）
     if (body?.d?.channel_type === 'WEBHOOK_CHALLENGE') {

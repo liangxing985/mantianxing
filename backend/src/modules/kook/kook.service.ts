@@ -197,56 +197,48 @@ export class KookService implements OnModuleDestroy {
     }
   }
 
-  /** 构建抢单卡片 */
+  /** 构建抢单卡片（手动构建，确保按钮有click=return-val） */
   private buildOrderCard(order: any): string {
     const gameName = order.serviceItem?.game?.name || '未知游戏';
     const serviceName = order.serviceItem?.name || '未知服务';
     const customerName = order.customer?.nickname || '匿名老板';
     const unit = order.unit === 'hour' ? '小时' : order.unit === 'game' ? '局' : '段';
 
-    const cardJson = CardBuilder.fromTemplate()
-      .size('lg')
-      .theme('info')
-      .color('#6c5ce7')
-      .addKMarkdownText(`**🎮 新订单待抢**`)
-      .addDivider()
-      .addKMarkdownText(`**游戏：** ${gameName} / ${serviceName}`)
-      .addKMarkdownText(`**⏱ 时长：** ${order.duration}${unit}`)
-      .addKMarkdownText(`**💰 价格：** ${order.totalAmount} 星石（约 ${(order.totalAmount / 10).toFixed(1)}元）`)
-      .addKMarkdownText(`**👤 老板：** ${customerName}`)
-      .addKMarkdownText(`**📝 要求：** ${order.requirement || '无特殊要求'}`)
-      .addDivider()
-      .addContext(`订单号：${order.orderNo} · 发布于 ${new Date().toLocaleString('zh-CN')}`)
-      .addActionGroup([
-        {
-          text: '🔥 立即抢单',
-          value: `grab:${order.id}`,
-          theme: 'primary',
-        },
-      ])
-      .build();
+    const card = [
+      {
+        type: 'card',
+        theme: 'info',
+        color: '#6c5ce7',
+        size: 'lg',
+        modules: [
+          { type: 'header', text: { type: 'plain-text', content: '🎮 新订单待抢' } },
+          { type: 'divider' },
+          { type: 'section', text: { type: 'kmarkdown', content: `**游戏：** ${gameName} / ${serviceName}` } },
+          { type: 'section', text: { type: 'kmarkdown', content: `**⏱ 时长：** ${order.duration}${unit}` } },
+          { type: 'section', text: { type: 'kmarkdown', content: `**💰 价格：** ${order.totalAmount} 星石（约 ${(order.totalAmount / 10).toFixed(1)}元）` } },
+          { type: 'section', text: { type: 'kmarkdown', content: `**👤 老板：** ${customerName}` } },
+          { type: 'section', text: { type: 'kmarkdown', content: `**📝 要求：** ${order.requirement || '无特殊要求'}` } },
+          { type: 'divider' },
+          { type: 'context', elements: [{ type: 'plain-text', content: `订单号：${order.orderNo} · 发布于 ${new Date().toLocaleString('zh-CN')}` }] },
+          {
+            type: 'action-group',
+            elements: [
+              {
+                type: 'button',
+                theme: 'primary',
+                value: `grab:${order.id}`,
+                click: 'return-val',
+                text: { type: 'plain-text', content: '🔥 立即抢单' },
+              },
+            ],
+          },
+        ],
+      },
+    ];
 
-    // 修复：给按钮添加 click: 'return-val' 属性，否则点击不触发事件
-    try {
-      const card = JSON.parse(cardJson);
-      this.logger.log(`【卡片调试】卡片结构: ${JSON.stringify(card)?.substring(0, 500)}`);
-      if (Array.isArray(card) && card[0]?.modules) {
-        for (const module of card[0].modules) {
-          if (module.type === 'action-group' && Array.isArray(module.elements)) {
-            for (const btn of module.elements) {
-              if (btn.type === 'button') {
-                btn.click = 'return-val';
-                this.logger.log(`【卡片调试】按钮已添加click属性: ${JSON.stringify(btn)}`);
-              }
-            }
-          }
-        }
-      }
-      return JSON.stringify(card);
-    } catch (e) {
-      this.logger.error('卡片解析失败', e);
-      return cardJson;
-    }
+    const cardJson = JSON.stringify(card);
+    this.logger.log(`【卡片调试】按钮click属性: ${JSON.stringify(card[0].modules[card[0].modules.length - 1].elements[0])}`);
+    return cardJson;
   }
 
   /** 构建已接单卡片 */
