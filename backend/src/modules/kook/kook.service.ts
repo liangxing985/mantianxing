@@ -141,6 +141,10 @@ export class KookService implements OnModuleDestroy {
     const unit = order.serviceItem?.unit === 'hour' ? '小时' : order.serviceItem?.unit === 'game' ? '局' : '段';
     const coinRate = await this.configService.getNumber('coin_exchange_rate') || 10;
     const rmbAmount = (order.totalAmount / coinRate).toFixed(1);
+    const contactTypeMap: Record<string, string> = { qq: 'QQ', wechat: '微信', phone: '电话' };
+    const contactText = order.contactType && order.contactValue
+      ? `${contactTypeMap[order.contactType] || order.contactType}：${order.contactValue}`
+      : '未提供';
 
     const card = [
       {
@@ -155,6 +159,7 @@ export class KookService implements OnModuleDestroy {
           { type: 'section', text: { type: 'kmarkdown', content: `**⏱ 时长：** ${order.duration}${unit}` } },
           { type: 'section', text: { type: 'kmarkdown', content: `**💰 价格：** ${order.totalAmount} 星石（约 ${rmbAmount}元）` } },
           { type: 'section', text: { type: 'kmarkdown', content: `**👤 老板：** ${customerName}` } },
+          { type: 'section', text: { type: 'kmarkdown', content: `**📞 联系方式：** ${contactText}` } },
           { type: 'section', text: { type: 'kmarkdown', content: `**📝 要求：** ${order.requirement || '无特殊要求'}` } },
           { type: 'divider' },
           { type: 'context', elements: [{ type: 'plain-text', content: `订单号：${order.orderNo} · 发布于 ${new Date().toLocaleString('zh-CN')}` }] },
