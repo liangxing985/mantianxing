@@ -34,7 +34,7 @@
               <div class="service-name">{{ order.serviceItem?.name }}</div>
             </td>
             <td>{{ order.customer?.nickname }}</td>
-            <td>{{ order.duration }}{{ unitText(order.unit) }}</td>
+            <td>{{ order.duration }}{{ unitText(order.serviceItem?.unit) }}</td>
             <td class="amount">{{ order.totalAmount }} 星石</td>
             <td><span class="tag" :class="statusClass(order.status)">{{ statusText(order.status) }}</span></td>
             <td class="time">{{ formatTime(order.createdAt) }}</td>

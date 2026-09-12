@@ -41,7 +41,7 @@
           <div class="order-info">
             <div class="provider-name">{{ order.provider?.nickname || '等待接单中...' }}</div>
             <div class="service-info">{{ order.serviceItem?.game?.name }} / {{ order.serviceItem?.name }}</div>
-            <div class="order-meta">{{ order.duration }}{{ unitText(order.unit) }} · {{ order.totalAmount }}星石</div>
+            <div class="order-meta">{{ order.duration }}{{ unitText(order.serviceItem?.unit) }} · {{ order.totalAmount }}星石</div>
           </div>
           <div class="order-amount">
             <span class="amount-num">{{ order.totalAmount }}</span>

@@ -16,7 +16,7 @@
     <div class="card">
       <div class="card-title">订单信息</div>
       <van-cell title="服务" :value="`${order.serviceItem?.game?.name} / ${order.serviceItem?.name}`" />
-      <van-cell title="数量" :value="`${order.duration} ${unitText(order.unit)}`" />
+      <van-cell title="数量" :value="`${order.duration} ${unitText(order.serviceItem?.unit)}`" />
       <van-cell title="单价" :value="`${order.unitPrice} 星石`" />
       <van-cell title="预计收入">
         <template #value><span style="color: #00b894; font-weight: 600;">{{ order.providerIncome || Math.round(order.totalAmount * (100 - feeRate) / 100) }} 星石</span></template>

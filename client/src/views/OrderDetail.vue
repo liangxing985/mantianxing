@@ -26,7 +26,7 @@
       <div class="card-title">订单信息</div>
       <van-cell title="订单号" :value="order.orderNo" />
       <van-cell title="游戏服务" :value="`${order.serviceItem?.game?.name} / ${order.serviceItem?.name}`" />
-      <van-cell title="数量" :value="`${order.duration} ${unitText(order.unit)}`" />
+      <van-cell title="数量" :value="`${order.duration} ${unitText(order.serviceItem?.unit)}`" />
       <van-cell title="单价" :value="`${order.unitPrice} 星石`" />
       <van-cell title="总金额">
         <template #value>

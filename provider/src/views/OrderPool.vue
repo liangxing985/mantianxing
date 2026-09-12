@@ -63,7 +63,7 @@
           <div class="order-body">
             <div class="service-name">{{ order.serviceItem?.name }}</div>
             <div class="order-meta">
-              <span class="meta-item">⏱ {{ order.duration }}{{ unitText(order.unit) }}</span>
+              <span class="meta-item">⏱ {{ order.duration }}{{ unitText(order.serviceItem?.unit) }}</span>
               <span class="meta-item">👤 {{ order.customer?.nickname }}</span>
             </div>
             <div class="requirement" v-if="order.requirement">
