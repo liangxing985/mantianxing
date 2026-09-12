@@ -2,6 +2,7 @@
   <div class="order-create">
     <van-nav-bar :title="fromProvider ? '陪玩下单' : '确认订单'" left-arrow @click-left="$router.back()" />
 
+    <!-- 商品模式：商品信息（移到订单信息里） -->
     <!-- 陪玩模式：陪玩信息 -->
     <van-cell-group inset v-if="fromProvider" style="margin-top: 12px;">
       <van-cell title="游戏" :value="gameName" />
@@ -32,12 +33,6 @@
         </template>
       </van-cell>
       <van-cell v-if="playMode === 'double' && secondProvider" title="第二位陪玩单价" :value="secondProviderPrice + ' 星石/小时'" />
-    </van-cell-group>
-
-    <!-- 商品模式：商品信息 -->
-    <van-cell-group inset v-if="!fromProvider && productName" style="margin-top: 12px;">
-      <van-cell title="商品" :value="productName" />
-      <van-cell title="单价" :value="productPrice + ' 星石'" />
     </van-cell-group>
 
     <!-- 商品模式：陪玩选择 -->
@@ -71,6 +66,13 @@
 
     <van-form @submit="handleSubmit">
       <van-cell-group inset title="订单信息" style="margin-top: 12px;">
+        <!-- 商品模式：显示商品完整信息 -->
+        <template v-if="!fromProvider && productName">
+          <van-cell title="商品" :value="productName" />
+          <van-cell v-if="productGameName" title="游戏" :value="productGameName" />
+          <van-cell v-if="productDescription" title="描述" :value="productDescription" />
+          <van-cell title="单价" :value="productPrice + ' 星石'" />
+        </template>
         <van-field name="duration" label="时长(小时)" :model-value="form.duration" type="digit" @update:model-value="v => form.duration = Number(v)" />
         <van-field label="总计">
           <template #input>
@@ -186,6 +188,9 @@ const tempSecondId = ref(0)
 const productName = route.query.productName as string || ''
 const productPrice = Number(route.query.price) || 0
 const productId = Number(route.query.productId) || 0
+const productGameId = Number(route.query.gameId) || 0
+const productGameName = route.query.gameName as string || ''
+const productDescription = route.query.description as string || ''
 const selectedProviders = ref<any[]>([])
 const tempSelected = ref<number[]>([])
 const assignMode = ref<'none' | '指定'>('none')
@@ -195,11 +200,11 @@ const showContactPicker = ref(false)
 
 const form = reactive({
   serviceItemId: 0,
-  gameId: gameId || 0,
+  gameId: gameId || productGameId || 0,
   duration: 1,
   contactType: 'QQ',
   contactValue: '',
-  requirement: fromProvider ? `游戏：${gameName}` : (productName ? `购买商品：${productName}` : ''),
+  requirement: '',
 })
 
 const contactOptions = [

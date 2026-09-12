@@ -136,7 +136,7 @@ export class KookService implements OnModuleDestroy {
     const gameName = order.serviceItem?.game?.name || '未知游戏';
     const serviceName = order.serviceItem?.name || '未知服务';
     const customerName = order.customer?.nickname || '匿名老板';
-    const unit = order.unit === 'hour' ? '小时' : order.unit === 'game' ? '局' : '段';
+    const unit = order.serviceItem?.unit === 'hour' ? '小时' : order.serviceItem?.unit === 'game' ? '局' : '段';
 
     const card = [
       {

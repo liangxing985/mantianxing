@@ -207,7 +207,17 @@ const onProductClick = (p: any) => {
     router.push('/login')
     return
   }
-  router.push({ path: '/order/create', query: { productId: p.id, productName: p.name, price: p.price } })
+  router.push({
+    path: '/order/create',
+    query: {
+      productId: p.id,
+      productName: p.name,
+      price: p.price,
+      gameId: p.gameId || '',
+      gameName: p.game?.name || '',
+      description: p.description || '',
+    }
+  })
 }
 
 const getMinPrice = (p: any) => {

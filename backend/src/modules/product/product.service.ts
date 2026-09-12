@@ -9,6 +9,7 @@ export class ProductService {
   async getPublicList() {
     return this.prisma.product.findMany({
       where: { isActive: true },
+      include: { game: true },
       orderBy: [{ sortOrder: 'asc' }, { id: 'desc' }],
     });
   }

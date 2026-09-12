@@ -128,6 +128,7 @@ model Game {
   serviceItems ServiceItem[]
   providerGames ProviderGame[]
   gamePricings GamePricing[]
+  products Product[]
 
   @@map("games")
 }
@@ -384,6 +385,7 @@ model Product {
   price       Int      // 价格（星石）
   originalPrice Int?   // 原价（星石，用于划线价）
   gameId      Int?     // 关联游戏（可选）
+  game        Game?    @relation(fields: [gameId], references: [id], onDelete: SetNull)
   category    String   @default("normal") @db.VarChar(30) // 分类：normal普通 / hot热门 / discount折扣
   image       String?  @db.MediumText // 商品图片（base64或URL）
   durationOptions String? @db.Text // 可选时长配置JSON，如[{"label":"1小时","value":1}]
