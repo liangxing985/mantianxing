@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { KookClient, CardBuilder } from '@kookapp/js-sdk';
 import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../config/redis.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class KookService implements OnModuleDestroy {
@@ -13,6 +14,7 @@ export class KookService implements OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
+    private readonly configService: SystemConfigService,
   ) {}
 
   /** 连接 Kook WebSocket（带自动重连） */
@@ -91,7 +93,7 @@ export class KookService implements OnModuleDestroy {
     }
 
     try {
-      const card = this.buildOrderCard(order);
+      const card = await this.buildOrderCard(order);
       const res: any = await this.client.api.createMessage({
         type: 10,
         target_id: channelId,
@@ -132,11 +134,13 @@ export class KookService implements OnModuleDestroy {
   }
 
   /** 构建抢单卡片（手动构建，确保按钮有click=return-val） */
-  private buildOrderCard(order: any): string {
+  private async buildOrderCard(order: any): Promise<string> {
     const gameName = order.serviceItem?.game?.name || '未知游戏';
     const serviceName = order.serviceItem?.name || '未知服务';
     const customerName = order.customer?.nickname || '匿名老板';
     const unit = order.serviceItem?.unit === 'hour' ? '小时' : order.serviceItem?.unit === 'game' ? '局' : '段';
+    const coinRate = await this.configService.getNumber('coin_exchange_rate') || 10;
+    const rmbAmount = (order.totalAmount / coinRate).toFixed(1);
 
     const card = [
       {
@@ -149,7 +153,7 @@ export class KookService implements OnModuleDestroy {
           { type: 'divider' },
           { type: 'section', text: { type: 'kmarkdown', content: `**游戏：** ${gameName} / ${serviceName}` } },
           { type: 'section', text: { type: 'kmarkdown', content: `**⏱ 时长：** ${order.duration}${unit}` } },
-          { type: 'section', text: { type: 'kmarkdown', content: `**💰 价格：** ${order.totalAmount} 星石（约 ${(order.totalAmount / 10).toFixed(1)}元）` } },
+          { type: 'section', text: { type: 'kmarkdown', content: `**💰 价格：** ${order.totalAmount} 星石（约 ${rmbAmount}元）` } },
           { type: 'section', text: { type: 'kmarkdown', content: `**👤 老板：** ${customerName}` } },
           { type: 'section', text: { type: 'kmarkdown', content: `**📝 要求：** ${order.requirement || '无特殊要求'}` } },
           { type: 'divider' },
