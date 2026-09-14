@@ -11,13 +11,19 @@ export class CouponService {
     const coupons = await this.prisma.coupon.findMany({
       where: {
         isEnabled: true,
-        OR: [
-          { startTime: null },
-          { startTime: { lte: now } },
-        ],
-        OR: [
-          { endTime: null },
-          { endTime: { gte: now } },
+        AND: [
+          {
+            OR: [
+              { startTime: null },
+              { startTime: { lte: now } },
+            ],
+          },
+          {
+            OR: [
+              { endTime: null },
+              { endTime: { gte: now } },
+            ],
+          },
         ],
       },
       orderBy: { createdAt: 'desc' },
