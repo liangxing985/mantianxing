@@ -13,6 +13,9 @@
           <router-link to="/providers" class="nav-item" active-class="active">陪玩大厅</router-link>
           <router-link to="/orders" class="nav-item" active-class="active">我的订单</router-link>
           <router-link to="/wallet" class="nav-item" active-class="active">我的钱包</router-link>
+          <router-link to="/rank" class="nav-item" active-class="active">排行榜</router-link>
+          <router-link to="/membership" class="nav-item" active-class="active">会员中心</router-link>
+          <router-link to="/chat" class="nav-item" active-class="active">我的聊天</router-link>
         </nav>
         <div class="header-right">
           <div v-if="userInfo" class="user-info" @click="$router.push('/profile')">

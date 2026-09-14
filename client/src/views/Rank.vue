@@ -1,7 +1,6 @@
 <template>
   <div class="rank-page">
     <div class="tabs">
-      <div :class="['tab', activeTab === 'income' && 'active']" @click="switchTab('income')">收入榜</div>
       <div :class="['tab', activeTab === 'order' && 'active']" @click="switchTab('order')">接单榜</div>
       <div :class="['tab', activeTab === 'rating' && 'active']" @click="switchTab('rating')">好评榜</div>
       <div :class="['tab', activeTab === 'gift' && 'active']" @click="switchTab('gift')">收礼榜</div>
@@ -13,8 +12,7 @@
         <div class="info">
           <div class="name">{{ item.user?.nickname || item.nickname }}</div>
           <div class="sub">
-            <span v-if="activeTab === 'income'">收入 {{ item.totalIncome }} 星石</span>
-            <span v-else-if="activeTab === 'order'">接单 {{ item.orderCount }} 单</span>
+            <span v-if="activeTab === 'order'">接单 {{ item.orderCount }} 单</span>
             <span v-else-if="activeTab === 'rating'">评分 {{ item.rating?.toFixed(1) }} ({{ item.ratingCount }}评)</span>
             <span v-else>收礼 {{ item.totalGiftsReceived }} 星石</span>
           </div>
@@ -31,7 +29,7 @@ import { useRouter } from 'vue-router'
 import request from '@/utils/request'
 
 const router = useRouter()
-const activeTab = ref('income')
+const activeTab = ref('order')
 const list = ref<any[]>([])
 const defaultAvatar = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="%23ddd"/></svg>'
 

@@ -74,35 +74,11 @@
         <div v-if="isLoggedIn" class="menu-section">
           <h3 class="menu-title">更多功能</h3>
           <div class="menu-grid">
-            <div class="menu-item" @click="$router.push('/membership')">
-              <div class="menu-icon">👑</div>
-              <div class="menu-text">
-                <div class="menu-name">会员中心</div>
-                <div class="menu-desc">VIP等级与专属权益</div>
-              </div>
-              <span class="menu-arrow">›</span>
-            </div>
-            <div class="menu-item" @click="$router.push('/rank')">
-              <div class="menu-icon">🏆</div>
-              <div class="menu-text">
-                <div class="menu-name">排行榜</div>
-                <div class="menu-desc">收入/接单/好评榜</div>
-              </div>
-              <span class="menu-arrow">›</span>
-            </div>
             <div class="menu-item" @click="$router.push('/invite')">
               <div class="menu-icon">🎁</div>
               <div class="menu-text">
                 <div class="menu-name">邀请好友</div>
                 <div class="menu-desc">邀请得佣金奖励</div>
-              </div>
-              <span class="menu-arrow">›</span>
-            </div>
-            <div class="menu-item" @click="$router.push('/chat')">
-              <div class="menu-icon">💬</div>
-              <div class="menu-text">
-                <div class="menu-name">我的聊天</div>
-                <div class="menu-desc">与陪玩在线沟通</div>
               </div>
               <span class="menu-arrow">›</span>
             </div>
