@@ -44,6 +44,14 @@
           <el-input-number v-model="withdrawFee" :min="0" :max="100" :step="1" />
           <span style="margin-left:8px;color:#909399;">%</span>
         </el-form-item>
+        <el-form-item label="礼物打赏抽成">
+          <el-input-number v-model="giftFeeRate" :min="0" :max="100" :step="1" />
+          <span style="margin-left:8px;color:#909399;">%（打赏金额中平台收取比例）</span>
+        </el-form-item>
+        <el-form-item label="邀请分销佣金">
+          <el-input-number v-model="inviteCommissionRate" :min="0" :max="100" :step="1" />
+          <span style="margin-left:8px;color:#909399;">%（下级消费时上级获得比例）</span>
+        </el-form-item>
         <el-form-item label="订单过期时间">
           <el-input-number v-model="orderExpire" :min="1" :max="72" :step="1" />
           <span style="margin-left:8px;color:#909399;">小时</span>
@@ -195,6 +203,8 @@ const coinRate = ref(10)
 const minWithdraw = ref(100)
 const withdrawFee = ref(5)
 const orderExpire = ref(2)
+const giftFeeRate = ref(20)
+const inviteCommissionRate = ref(10)
 const theme = reactive({ primaryColor: '#1a1a2e', accentColor: '#e94560', bgColor: '#0f0f1a' })
 const rankOptions = ref<string[]>(['王者', '星耀', '钻石', '铂金', '黄金', '白银', '青铜'])
 const unitOptions = ref<{label: string, value: string}[]>([
@@ -237,6 +247,8 @@ const loadConfig = async () => {
   minWithdraw.value = Number(data.min_withdraw) || 100
   withdrawFee.value = Number(data.withdraw_fee_rate) || 5
   orderExpire.value = Number(data.order_expire_hours) || 2
+  giftFeeRate.value = Number(data.gift_platform_fee_rate) || 20
+  inviteCommissionRate.value = Number(data.invite_commission_rate) || 10
   if (data.client_theme) {
     try {
       const t = JSON.parse(data.client_theme)
@@ -296,6 +308,8 @@ const saveConfig = async () => {
       { key: 'min_withdraw', value: String(minWithdraw.value) },
       { key: 'withdraw_fee_rate', value: String(withdrawFee.value) },
       { key: 'order_expire_hours', value: String(orderExpire.value) },
+      { key: 'gift_platform_fee_rate', value: String(giftFeeRate.value) },
+      { key: 'invite_commission_rate', value: String(inviteCommissionRate.value) },
       { key: 'client_theme', value: JSON.stringify(theme) },
       { key: 'rank_options', value: JSON.stringify(rankOptions.value.filter(r => r && r.trim())) },
       { key: 'unit_options', value: JSON.stringify(unitOptions.value.filter(u => u && u.label && u.value)) },

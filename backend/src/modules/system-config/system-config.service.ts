@@ -18,6 +18,8 @@ const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = 
     value: JSON.stringify(['王者', '星耀', '钻石', '铂金', '黄金', '白银', '青铜']),
     description: '段位选项列表（JSON数组）',
   },
+  gift_platform_fee_rate: { value: '20', description: '礼物打赏平台抽成比例（%）' },
+  invite_commission_rate: { value: '10', description: '邀请分销佣金比例（%）' },
 };
 
 @Injectable()

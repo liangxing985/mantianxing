@@ -1,11 +1,15 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class GiftService {
   private readonly logger = new Logger(GiftService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: SystemConfigService,
+  ) {}
 
   // 获取礼物列表
   async getGifts() {
@@ -21,11 +25,15 @@ export class GiftService {
     const wallet = await this.prisma.wallet.findUnique({ where: { userId: senderId } });
     if (!wallet || wallet.balance < totalAmount) throw new BadRequestException('星石余额不足');
 
+    // 从系统配置读取礼物打赏平台抽成比例（%），默认20%
+    const feeRatePercent = await this.configService.getNumber('gift_platform_fee_rate');
+    const feeRate = (feeRatePercent || 20) / 100;
+
     const result = await this.prisma.$transaction(async (tx) => {
       // 扣款
       await tx.wallet.update({ where: { userId: senderId }, data: { balance: { decrement: totalAmount } } });
-      // 收款方收入（平台抽成20%）
-      const platformFee = Math.floor(totalAmount * 0.2);
+      // 收款方收入（平台抽成）
+      const platformFee = Math.floor(totalAmount * feeRate);
       const receiverIncome = totalAmount - platformFee;
       const receiverWallet = await tx.wallet.findUnique({ where: { userId: receiverId } });
       if (receiverWallet) {

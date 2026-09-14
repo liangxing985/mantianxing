@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -12,7 +13,10 @@ function generateInviteCode(): string {
 export class InviteService {
   private readonly logger = new Logger(InviteService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private configService: SystemConfigService,
+  ) {}
 
   // 获取或生成邀请码
   async getMyInviteCode(userId: number) {
@@ -55,7 +59,9 @@ export class InviteService {
   async awardCommission(inviteeId: number, orderId: number, orderAmount: number) {
     const record = await this.prisma.inviteRecord.findUnique({ where: { inviteeId } });
     if (!record) return null;
-    const rate = 0.1; // 一级佣金10%
+    // 从系统配置读取邀请分销佣金比例（%），默认10%
+    const ratePercent = await this.configService.getNumber('invite_commission_rate');
+    const rate = (ratePercent || 10) / 100;
     const amount = Math.floor(orderAmount * rate);
     if (amount <= 0) return null;
     const wallet = await this.prisma.wallet.findUnique({ where: { userId: record.inviterId } });
