@@ -362,4 +362,54 @@ export class PaymentService {
     ]);
     return { list, total, page, pageSize };
   }
+
+  /**
+   * 管理端：充值统计
+   */
+  async getAdminStats() {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const [todayCount, todayAgg, totalCount, totalAgg] = await Promise.all([
+      this.prisma.paymentOrder.count({
+        where: { payStatus: 'paid', createdAt: { gte: todayStart } },
+      }),
+      this.prisma.paymentOrder.aggregate({
+        where: { payStatus: 'paid', createdAt: { gte: todayStart } },
+        _sum: { amount: true },
+      }),
+      this.prisma.paymentOrder.count({ where: { payStatus: 'paid' } }),
+      this.prisma.paymentOrder.aggregate({
+        where: { payStatus: 'paid' },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    return {
+      todayCount,
+      todayAmount: Number(todayAgg._sum.amount || 0).toFixed(2),
+      totalCount,
+      totalAmount: Number(totalAgg._sum.amount || 0).toFixed(2),
+    };
+  }
+
+  /**
+   * 管理端：所有充值订单列表
+   */
+  async getAllOrders(page: number, pageSize: number, status?: string) {
+    const where: any = {};
+    if (status) where.payStatus = status;
+
+    const [list, total] = await Promise.all([
+      this.prisma.paymentOrder.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { user: { select: { id: true, username: true, nickname: true } } },
+      }),
+      this.prisma.paymentOrder.count({ where }),
+    ]);
+    return { list, total, page, pageSize };
+  }
 }
