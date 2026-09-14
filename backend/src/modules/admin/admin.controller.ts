@@ -134,7 +134,7 @@ export class AdminController {
     return this.adminService.getDetailedDashboard();
   }
 
-  // ==================== 客服手动派单 ====================
+  // ==================== 客服派单 ====================
   @Get('pool-orders')
   async getPoolOrders() {
     return this.adminService.getPoolOrders();
@@ -144,8 +144,27 @@ export class AdminController {
   async manualAssignOrder(
     @CurrentUser() user: any,
     @Param('id') id: number,
-    @Body() body: { providerId: number },
+    @Body() body: { providerIds: number[] },
   ) {
-    return this.adminService.manualAssignOrder(user.id, id, body.providerId);
+    return this.adminService.manualAssignOrder(user.id, id, body.providerIds);
+  }
+
+  @Post('orders/:id/auto-assign')
+  async autoAssignOrder(@CurrentUser() user: any, @Param('id') id: number) {
+    return this.adminService.autoAssignOrder(user.id, id);
+  }
+
+  @Post('orders/:id/reassign')
+  async reassignOrder(
+    @CurrentUser() user: any,
+    @Param('id') id: number,
+    @Body() body: { newProviderId: number; reason: string },
+  ) {
+    return this.adminService.reassignOrder(user.id, id, body.newProviderId, body.reason);
+  }
+
+  @Get('orders/:id/dispatch-records')
+  async getDispatchRecords(@Param('id') id: number) {
+    return this.adminService.getDispatchRecords(id);
   }
 }

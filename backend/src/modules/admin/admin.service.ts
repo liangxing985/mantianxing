@@ -646,30 +646,200 @@ export class AdminService {
   }
 
   // 客服手动指定陪玩接单
-  async manualAssignOrder(operatorId: number, orderId: number, providerId: number) {
+  // 手动派单（支持单陪/双陪）
+  async manualAssignOrder(operatorId: number, orderId: number, providerIds: number[]) {
+    if (!providerIds || providerIds.length === 0) throw new BadRequestException('请选择陪玩');
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('订单不存在');
     if (order.status !== 'PAID' || order.providerId) throw new BadRequestException('订单状态不允许手动派单');
-    const provider = await this.prisma.user.findUnique({ where: { id: providerId } });
-    if (!provider || provider.role !== 'PROVIDER') throw new BadRequestException('陪玩不存在');
-    const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
-    if (!profile || profile.applyStatus !== 'APPROVED') throw new BadRequestException('陪玩未通过入驻审核');
 
+    // 如果是双陪订单（orderGroup有多个PAID订单），需要派给多个陪玩
+    const groupOrders = order.orderGroup
+      ? await this.prisma.order.findMany({ where: { orderGroup: order.orderGroup, status: 'PAID' } })
+      : [order];
+
+    if (providerIds.length > groupOrders.length) {
+      throw new BadRequestException(`陪玩数量(${providerIds.length})超过订单数量(${groupOrders.length})`);
+    }
+
+    const results = [];
+    for (let i = 0; i < providerIds.length; i++) {
+      const providerId = providerIds[i];
+      const targetOrder = groupOrders[i];
+      const provider = await this.prisma.user.findUnique({ where: { id: providerId } });
+      if (!provider || provider.role !== 'PROVIDER') throw new BadRequestException(`陪玩${providerId}不存在`);
+      const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
+      if (!profile || profile.applyStatus !== 'APPROVED') throw new BadRequestException(`陪玩${provider.nickname}未通过入驻审核`);
+
+      await this.prisma.order.update({
+        where: { id: targetOrder.id },
+        data: { providerId, status: 'ASSIGNED', acceptedAt: new Date() },
+      });
+
+      // 记录派单记录
+      await this.prisma.dispatchRecord.create({
+        data: {
+          orderId: targetOrder.id,
+          operatorId,
+          toProviderId: providerId,
+          type: 'DISPATCH',
+        },
+      });
+
+      // 通知陪玩
+      await this.prisma.message.create({
+        data: {
+          userId: providerId,
+          type: 'ORDER',
+          title: '客服派单通知',
+          content: `客服为您指派了新订单：${targetOrder.title}，请尽快开始服务`,
+          orderId: targetOrder.id,
+        },
+      });
+
+      results.push({ orderId: targetOrder.id, providerId, providerName: provider.nickname });
+      this.logger.log(`客服${operatorId}手动将订单${targetOrder.id}派给陪玩${providerId}`);
+    }
+
+    return { success: true, dispatched: results };
+  }
+
+  // 自动派单（权重算法：在线状态40% + 评分30% + 接单量30%）
+  async autoAssignOrder(operatorId: number, orderId: number) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { serviceItem: true },
+    });
+    if (!order) throw new NotFoundException('订单不存在');
+    if (order.status !== 'PAID' || order.providerId) throw new BadRequestException('订单状态不允许自动派单');
+
+    // 查询符合条件的陪玩（已入驻、接单中、开通该游戏服务）
+    const providers = await this.prisma.user.findMany({
+      where: {
+        role: 'PROVIDER',
+        status: 'ACTIVE',
+        providerProfile: {
+          applyStatus: 'APPROVED',
+          acceptOrder: true,
+          games: { some: { gameId: order.gameId, isEnabled: true } },
+        },
+      },
+      include: { providerProfile: true },
+    });
+
+    if (providers.length === 0) throw new BadRequestException('暂无符合条件的陪玩');
+
+    // 计算权重得分
+    const scored = providers.map((p) => {
+      const profile = p.providerProfile!;
+      const onlineScore = profile.isOnline ? 40 : 10; // 在线40分，离线10分
+      const ratingScore = (profile.rating / 5) * 30; // 评分满分30
+      const orderScore = Math.min(profile.orderCount / 100, 1) * 30; // 接单量满分30（100单封顶）
+      return { provider: p, score: onlineScore + ratingScore + orderScore };
+    });
+
+    // 按得分降序，取最高分
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored[0];
+
+    // 派单
     await this.prisma.order.update({
       where: { id: orderId },
-      data: { providerId, status: 'ASSIGNED', acceptedAt: new Date() },
+      data: { providerId: best.provider.id, status: 'ASSIGNED', acceptedAt: new Date() },
     });
+
+    // 记录派单记录
+    await this.prisma.dispatchRecord.create({
+      data: {
+        orderId,
+        operatorId,
+        toProviderId: best.provider.id,
+        type: 'AUTO',
+        reason: `自动派单，权重得分${best.score.toFixed(1)}（在线${best.provider.providerProfile?.isOnline ? '是' : '否'}，评分${best.provider.providerProfile?.rating}，接单${best.provider.providerProfile?.orderCount}单）`,
+      },
+    });
+
     // 通知陪玩
     await this.prisma.message.create({
       data: {
-        userId: providerId,
+        userId: best.provider.id,
         type: 'ORDER',
-        title: '客服派单通知',
-        content: `客服为您指派了新订单：${order.title}，请尽快开始服务`,
+        title: '系统自动派单通知',
+        content: `系统为您自动匹配了新订单：${order.title}，请尽快开始服务`,
         orderId,
       },
     });
-    this.logger.log(`客服${operatorId}手动将订单${orderId}派给陪玩${providerId}`);
+
+    this.logger.log(`自动派单：订单${orderId} → 陪玩${best.provider.id}，得分${best.score.toFixed(1)}`);
+    return { success: true, providerId: best.provider.id, providerName: best.provider.nickname, score: best.score };
+  }
+
+  // 转派/换人
+  async reassignOrder(operatorId: number, orderId: number, newProviderId: number, reason: string) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('订单不存在');
+    if (!['ASSIGNED', 'SERVING'].includes(order.status)) throw new BadRequestException('当前订单状态不可转派');
+    if (!order.providerId) throw new BadRequestException('订单未指派陪玩，无法转派');
+
+    const oldProviderId = order.providerId;
+    const newProvider = await this.prisma.user.findUnique({ where: { id: newProviderId } });
+    if (!newProvider || newProvider.role !== 'PROVIDER') throw new BadRequestException('新陪玩不存在');
+    const newProfile = await this.prisma.providerProfile.findUnique({ where: { userId: newProviderId } });
+    if (!newProfile || newProfile.applyStatus !== 'APPROVED') throw new BadRequestException('新陪玩未通过入驻审核');
+
+    // 转派
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { providerId: newProviderId, acceptedAt: new Date() },
+    });
+
+    // 记录转派记录
+    await this.prisma.dispatchRecord.create({
+      data: {
+        orderId,
+        operatorId,
+        fromProviderId: oldProviderId,
+        toProviderId: newProviderId,
+        type: 'REDISPATCH',
+        reason,
+      },
+    });
+
+    // 通知原陪玩
+    await this.prisma.message.create({
+      data: {
+        userId: oldProviderId,
+        type: 'ORDER',
+        title: '订单转派通知',
+        content: `您的订单${order.orderNo}已被客服转派给其他陪玩，原因：${reason || '无'}`,
+        orderId,
+      },
+    });
+
+    // 通知新陪玩
+    await this.prisma.message.create({
+      data: {
+        userId: newProviderId,
+        type: 'ORDER',
+        title: '客服转派通知',
+        content: `客服为您转派了订单：${order.title}，请尽快开始服务`,
+        orderId,
+      },
+    });
+
+    this.logger.log(`转派：订单${orderId} 陪玩${oldProviderId} → ${newProviderId}，原因：${reason}`);
     return { success: true };
   }
-}
+
+  // 查询派单记录
+  async getDispatchRecords(orderId: number) {
+    return this.prisma.dispatchRecord.findMany({
+      where: { orderId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        operator: { select: { id: true, nickname: true } },
+        fromProvider: { select: { id: true, nickname: true } },
+        toProvider: { select: { id: true, nickname: true } },
+      },
+    });
+  }

@@ -341,7 +341,8 @@ const handleSubmit = async () => {
         showToast('下单成功')
         router.replace(`/order/${res.id}`)
       } else {
-        // 双陪：创建两个订单
+        // 双陪：创建两个订单，共享orderGroup
+        const orderGroup = `GRP${Date.now()}${Math.floor(Math.random() * 1000)}`
         const orders = [
           { providerId, price: providerPrice },
           { providerId: secondProvider.value.id, price: secondProviderPrice.value },
@@ -354,6 +355,7 @@ const handleSubmit = async () => {
             title: `${gameName}双陪`,
             overridePrice: orders[i].price,
             productName: gameName,
+            orderGroup,
           })
           if (i === 0) firstId = res.id
         }

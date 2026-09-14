@@ -30,6 +30,7 @@ export class OrderService {
     gameAccount?: string;
     overridePrice?: number; // 商品下单时覆盖单价
     productName?: string; // 商品名称（备注用）
+    orderGroup?: string; // 订单组ID，双陪/多人订单共享
   }) {
     // 获取服务项目信息（商品模式下serviceItemId可能为0，自动查找该游戏第一个启用的服务项目）
     let serviceItem = null;
@@ -131,6 +132,7 @@ export class OrderService {
           gameId: data.gameId ?? serviceItem.gameId,
           serviceItemId: serviceItem.id,
           title: data.title || serviceItem.name,
+          orderGroup: data.orderGroup || `GRP${Date.now()}${Math.floor(Math.random() * 1000)}`,
           requirement: data.requirement,
           duration: data.duration,
           unitPrice,

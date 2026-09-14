@@ -60,6 +60,9 @@ model User {
   commissions   CommissionRecord[]
   skillTags     UserSkillTag[]
   depositRecords DepositRecord[]
+  dispatchRecordsAsOperator DispatchRecord[] @relation("DispatchOperator")
+  dispatchRecordsAsFrom DispatchRecord[]     @relation("DispatchFrom")
+  dispatchRecordsAsTo DispatchRecord[]       @relation("DispatchTo")
 
   @@index([role])
   @@index([status])
@@ -199,6 +202,7 @@ model Order {
   serviceItemId   Int
   serviceItem     ServiceItem @relation(fields: [serviceItemId], references: [id])
   title           String   @db.VarChar(100) // 订单标题
+  orderGroup      String?  @db.VarChar(32) // 订单组ID，双陪/多人订单共享同一个group
   requirement     String?  @db.Text // 老板要求
   duration        Int      @default(1) // 数量（小时/局数）
   unitPrice       Int      // 单价（星石）
@@ -234,6 +238,7 @@ model Order {
   evidences       OrderEvidence[]
   walletTxns      WalletTransaction[]
   messages        Message[]
+  dispatchRecords DispatchRecord[]
 
   @@index([customerId])
   @@index([providerId])
@@ -635,6 +640,27 @@ model UserSkillTag {
   @@unique([userId, tagId])
   @@index([tagId])
   @@map("user_skill_tags")
+}
+
+// 派单/转派记录表
+model DispatchRecord {
+  id            Int      @id @default(autoincrement())
+  orderId       Int
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  operatorId    Int?     // 操作人（客服/管理员），自动派单时为null
+  operator      User?    @relation("DispatchOperator", fields: [operatorId], references: [id])
+  fromProviderId Int?    // 原陪玩ID（转派时填写）
+  fromProvider  User?    @relation("DispatchFrom", fields: [fromProviderId], references: [id])
+  toProviderId  Int?     // 目标陪玩ID
+  toProvider    User?    @relation("DispatchTo", fields: [toProviderId], references: [id])
+  type          String   @db.VarChar(20) // DISPATCH派单 / REDISPATCH转派 / AUTO自动派单 / GRAB抢单
+  reason        String?  @db.Text // 转派原因
+  createdAt     DateTime @default(now())
+
+  @@index([orderId])
+  @@index([operatorId])
+  @@index([toProviderId])
+  @@map("dispatch_records")
 }
 
 // ==================== 枚举定义 ====================
