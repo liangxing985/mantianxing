@@ -80,6 +80,34 @@
 
         <div class="card">
           <div class="card-header">
+            <h3 class="card-title">功能中心</h3>
+          </div>
+          <div class="card-body">
+            <div class="func-grid">
+              <div class="func-item" @click="router.push('/membership')">
+                <span class="func-icon">👑</span><span>会员中心</span>
+              </div>
+              <div class="func-item" @click="router.push('/rank')">
+                <span class="func-icon">🏆</span><span>排行榜</span>
+              </div>
+              <div class="func-item" @click="router.push('/deposit')">
+                <span class="func-icon">🔒</span><span>保证金</span>
+              </div>
+              <div class="func-item" @click="router.push('/invite')">
+                <span class="func-icon">🎁</span><span>邀请好友</span>
+              </div>
+              <div class="func-item" @click="router.push('/chat')">
+                <span class="func-icon">💬</span><span>我的聊天</span>
+              </div>
+              <div class="func-item" @click="router.push('/services')">
+                <span class="func-icon">⚙️</span><span>服务管理</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
             <h3 class="card-title">数据统计</h3>
           </div>
           <div class="card-body">
@@ -415,6 +443,26 @@ onMounted(loadData)
 .stat-item { text-align: center; }
 .stat-num { font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
 .stat-label { font-size: 12px; color: var(--text-muted); }
+
+.func-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.func-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+.func-item:hover { background: var(--primary-color); color: #fff; }
+.func-icon { font-size: 22px; }
 
 /* 弹窗 */
 .modal-overlay {
