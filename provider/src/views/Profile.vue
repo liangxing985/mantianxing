@@ -87,20 +87,8 @@
               <div class="func-item" @click="router.push('/membership')">
                 <span class="func-icon">👑</span><span>会员中心</span>
               </div>
-              <div class="func-item" @click="router.push('/rank')">
-                <span class="func-icon">🏆</span><span>排行榜</span>
-              </div>
-              <div class="func-item" @click="router.push('/deposit')">
-                <span class="func-icon">🔒</span><span>保证金</span>
-              </div>
               <div class="func-item" @click="router.push('/invite')">
                 <span class="func-icon">🎁</span><span>邀请好友</span>
-              </div>
-              <div class="func-item" @click="router.push('/chat')">
-                <span class="func-icon">💬</span><span>我的聊天</span>
-              </div>
-              <div class="func-item" @click="router.push('/services')">
-                <span class="func-icon">⚙️</span><span>服务管理</span>
               </div>
             </div>
           </div>

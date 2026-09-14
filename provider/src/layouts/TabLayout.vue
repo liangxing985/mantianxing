@@ -86,7 +86,10 @@ const menuItems = [
   { path: '/wallet', label: '我的钱包', icon: '💳' },
   { path: '/services', label: '服务管理', icon: '💰' },
   { path: '/my-games', label: '可接游戏', icon: '🎮' },
-  { path: '/messages', label: '消息通知', icon: '💬' },
+  { path: '/rank', label: '排行榜', icon: '🏆' },
+  { path: '/deposit', label: '保证金', icon: '🔒' },
+  { path: '/chat', label: '我的聊天', icon: '💬' },
+  { path: '/messages', label: '消息通知', icon: '🔔' },
   { path: '/profile', label: '个人中心', icon: '👤' },
 ]
 
