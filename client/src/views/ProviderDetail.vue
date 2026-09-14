@@ -108,10 +108,46 @@
               <span class="order-price-value">{{ getMinPrice() }} 星石/时</span>
             </div>
             <button class="order-btn-large" @click="goOrder">立即下单</button>
+            <div class="action-row">
+              <button class="action-btn" @click="goChat">💬 私信聊天</button>
+              <button class="action-btn" @click="showGift = true">🎁 送礼物</button>
+            </div>
             <p class="order-tip">下单后陪玩确认接单即可开始服务</p>
           </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 礼物打赏弹窗 -->
+  <div v-if="showGift" class="gift-modal" @click.self="showGift = false">
+    <div class="gift-modal-content">
+      <div class="gift-modal-header">
+        <span>送礼物给 {{ provider.nickname }}</span>
+        <span class="close" @click="showGift = false">×</span>
+      </div>
+      <div class="gift-grid">
+        <div
+          v-for="g in gifts"
+          :key="g.id"
+          class="gift-item"
+          :class="{ active: selectedGift?.id === g.id }"
+          @click="selectedGift = g"
+        >
+          <div class="gift-icon">{{ g.icon || '🎁' }}</div>
+          <div class="gift-name">{{ g.name }}</div>
+          <div class="gift-price">{{ g.price }}星石</div>
+        </div>
+      </div>
+      <div class="gift-qty">
+        <span>数量：</span>
+        <button @click="giftQty = Math.max(1, giftQty - 1)">-</button>
+        <span>{{ giftQty }}</span>
+        <button @click="giftQty++">+</button>
+      </div>
+      <button class="gift-send-btn" @click="sendGift" :disabled="!selectedGift">
+        赠送（共 {{ (selectedGift?.price || 0) * giftQty }} 星石）
+      </button>
     </div>
   </div>
 </template>
@@ -120,7 +156,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
-import { getProviderDetail, getWallet } from '@/api'
+import { getProviderDetail, getWallet, getGiftList, sendGift as sendGiftApi, getOrCreateConversation } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -130,13 +166,24 @@ const reviews = ref<any[]>([])
 const wallet = ref<any>(null)
 const defaultAvatar = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 
+// 礼物打赏
+const showGift = ref(false)
+const gifts = ref<any[]>([])
+const selectedGift = ref<any>(null)
+const giftQty = ref(1)
+
 const loadData = async () => {
   const id = Number(route.params.id)
-  const [detail, w]: any = await Promise.all([getProviderDetail(id), getWallet().catch(() => null)])
+  const [detail, w, giftRes]: any = await Promise.all([
+    getProviderDetail(id),
+    getWallet().catch(() => null),
+    getGiftList().catch(() => ({ data: [] })),
+  ])
   provider.value = detail
   profile.value = detail.providerProfile || {}
   reviews.value = detail.reviews || []
   wallet.value = w
+  gifts.value = giftRes?.data || giftRes || []
 }
 
 const unitText = (u: string) => ({ hour: '小时', game: '局', package: '段' }[u] || u)
@@ -199,6 +246,37 @@ const formatTime = (time: string) => {
   if (!time) return ''
   const d = new Date(time)
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
+const goChat = async () => {
+  const token = localStorage.getItem('client_token')
+  if (!token) { router.push('/login'); return }
+  try {
+    const res: any = await getOrCreateConversation(Number(route.params.id))
+    const convId = res?.data?.id || res?.id
+    router.push(`/chat?conversationId=${convId}`)
+  } catch (e: any) {
+    showToast(e.response?.data?.message || '打开聊天失败')
+  }
+}
+
+const sendGift = async () => {
+  if (!selectedGift.value) return showToast('请选择礼物')
+  const token = localStorage.getItem('client_token')
+  if (!token) { router.push('/login'); return }
+  try {
+    await sendGiftApi({
+      receiverId: Number(route.params.id),
+      giftId: selectedGift.value.id,
+      quantity: giftQty.value,
+    })
+    showToast('赠送成功')
+    showGift.value = false
+    giftQty.value = 1
+    selectedGift.value = null
+  } catch (e: any) {
+    showToast(e.response?.data?.message || '赠送失败')
+  }
 }
 
 onMounted(loadData)
@@ -658,4 +736,57 @@ onMounted(loadData)
   font-size: 12px;
   color: #999;
 }
+
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.action-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.action-btn:hover { border-color: #6c5ce7; color: #6c5ce7; }
+
+.gift-modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 999;
+}
+.gift-modal-content {
+  background: #fff; border-radius: 12px; padding: 20px; width: 90%; max-width: 400px;
+}
+.gift-modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 16px; font-weight: 600; margin-bottom: 16px;
+}
+.gift-modal-header .close { cursor: pointer; font-size: 24px; color: #999; }
+.gift-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;
+}
+.gift-item {
+  border: 2px solid #eee; border-radius: 10px; padding: 12px 8px;
+  text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.gift-item.active { border-color: #6c5ce7; background: #f5f3ff; }
+.gift-icon { font-size: 28px; margin-bottom: 4px; }
+.gift-name { font-size: 13px; margin-bottom: 2px; }
+.gift-price { font-size: 12px; color: #faad14; }
+.gift-qty {
+  display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 16px;
+}
+.gift-qty button {
+  width: 32px; height: 32px; border: 1px solid #ddd; background: #fff;
+  border-radius: 6px; cursor: pointer; font-size: 16px;
+}
+.gift-send-btn {
+  width: 100%; padding: 12px; background: #6c5ce7; color: #fff;
+  border: none; border-radius: 8px; font-size: 15px; cursor: pointer;
+}
+.gift-send-btn:disabled { background: #ccc; cursor: not-allowed; }
 </style>

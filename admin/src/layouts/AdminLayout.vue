@@ -57,6 +57,18 @@
           <template #title>提现审核</template>
         </el-menu-item>
 
+        <el-sub-menu index="operation">
+          <template #title>
+            <el-icon><DataLine /></el-icon>
+            <span>运营管理</span>
+          </template>
+          <el-menu-item index="/data-dashboard">详细数据看板</el-menu-item>
+          <el-menu-item index="/manual-assign">客服派单</el-menu-item>
+          <el-menu-item index="/membership-manage">会员管理</el-menu-item>
+          <el-menu-item index="/gift-manage">礼物管理</el-menu-item>
+          <el-menu-item index="/tag-manage">标签管理</el-menu-item>
+        </el-sub-menu>
+
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
           <template #title>系统设置</template>
@@ -149,7 +161,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Fold, Expand, ArrowDown, DataAnalysis, User, UserFilled, Avatar, Goods, Promotion, Document, Checked, Money, Box, Setting } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, DataAnalysis, DataLine, User, UserFilled, Avatar, Goods, Promotion, Document, Checked, Money, Box, Setting } from '@element-plus/icons-vue'
 import { getProfile, updateProfile, getSystemConfig } from '@/api'
 
 const route = useRoute()
