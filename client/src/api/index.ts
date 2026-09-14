@@ -39,3 +39,30 @@ export const getProductList = () => request.get('/product/public/list')
 
 // 活动（公开）
 export const getActivityList = () => request.get('/activity/public/list')
+
+// 聊天
+export const getConversations = () => request.get('/chat/conversations')
+export const getOrCreateConversation = (targetUserId: number) => request.post(`/chat/conversation/${targetUserId}`)
+export const getChatMessages = (conversationId: number, params?: any) => request.get(`/chat/messages/${conversationId}`, { params })
+export const sendChatMessage = (conversationId: number, data: any) => request.post(`/chat/messages/${conversationId}`, data)
+
+// 排行榜
+export const getRank = (type: string) => request.get(`/rank/${type}`)
+
+// 会员
+export const getMembershipLevels = () => request.get('/membership/levels')
+export const getMyMembership = () => request.get('/membership/my')
+export const purchaseMembership = (data: any) => request.post('/membership/purchase', data)
+
+// 邀请
+export const getInviteCode = () => request.get('/invite/code')
+export const getInviteList = () => request.get('/invite/list')
+export const getCommissions = (params?: any) => request.get('/invite/commissions', { params })
+
+// 礼物
+export const getGiftList = () => request.get('/gift/list')
+export const sendGift = (data: any) => request.post('/gift/send', data)
+
+// 标签
+export const getTagList = (category?: string) => request.get('/tag/list', { params: { category } })
+export const getUserTags = (userId: number) => request.get(`/tag/user/${userId}`)

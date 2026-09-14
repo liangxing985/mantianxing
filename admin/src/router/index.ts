@@ -89,6 +89,36 @@ const routes = [
         component: () => import('@/views/SystemSettings.vue'),
         meta: { title: '系统设置', icon: 'Setting' },
       },
+      {
+        path: 'data-dashboard',
+        name: 'DataDashboard',
+        component: () => import('@/views/DataDashboard.vue'),
+        meta: { title: '详细数据看板', icon: 'DataLine' },
+      },
+      {
+        path: 'manual-assign',
+        name: 'ManualAssign',
+        component: () => import('@/views/ManualAssign.vue'),
+        meta: { title: '客服派单', icon: 'Promotion' },
+      },
+      {
+        path: 'membership-manage',
+        name: 'MembershipManage',
+        component: () => import('@/views/MembershipManage.vue'),
+        meta: { title: '会员管理', icon: 'Star' },
+      },
+      {
+        path: 'gift-manage',
+        name: 'GiftManage',
+        component: () => import('@/views/GiftManage.vue'),
+        meta: { title: '礼物管理', icon: 'Present' },
+      },
+      {
+        path: 'tag-manage',
+        name: 'TagManage',
+        component: () => import('@/views/TagManage.vue'),
+        meta: { title: '标签管理', icon: 'CollectionTag' },
+      },
     ],
   },
 ]

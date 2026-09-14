@@ -127,4 +127,25 @@ export class AdminController {
   async approveProviderGame(@Param('id') id: number, @Body() body: { status: 'APPROVED' | 'REJECTED' }) {
     return this.adminService.approveProviderGame(id, body.status);
   }
+
+  // ==================== 详细数据看板 ====================
+  @Get('dashboard/detail')
+  async getDetailedDashboard() {
+    return this.adminService.getDetailedDashboard();
+  }
+
+  // ==================== 客服手动派单 ====================
+  @Get('pool-orders')
+  async getPoolOrders() {
+    return this.adminService.getPoolOrders();
+  }
+
+  @Post('orders/:id/assign')
+  async manualAssignOrder(
+    @CurrentUser() user: any,
+    @Param('id') id: number,
+    @Body() body: { providerId: number },
+  ) {
+    return this.adminService.manualAssignOrder(user.id, id, body.providerId);
+  }
 }

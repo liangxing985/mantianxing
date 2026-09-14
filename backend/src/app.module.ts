@@ -16,6 +16,13 @@ import { ProductModule } from './modules/product/product.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { PricingModule } from './modules/pricing/pricing.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { RankModule } from './modules/rank/rank.module';
+import { MembershipModule } from './modules/membership/membership.module';
+import { DepositModule } from './modules/deposit/deposit.module';
+import { GiftModule } from './modules/gift/gift.module';
+import { InviteModule } from './modules/invite/invite.module';
+import { TagModule } from './modules/tag/tag.module';
 
 @Module({
   imports: [
@@ -39,6 +46,13 @@ import { PricingModule } from './modules/pricing/pricing.module';
     ActivityModule,
     UploadModule,
     PricingModule,
+    ChatModule,
+    RankModule,
+    MembershipModule,
+    DepositModule,
+    GiftModule,
+    InviteModule,
+    TagModule,
   ],
 })
 export class AppModule {}

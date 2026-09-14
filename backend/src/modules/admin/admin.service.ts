@@ -552,4 +552,124 @@ export class AdminService {
       data: { status },
     });
   }
+
+  // ==================== 详细数据看板 ====================
+  async getDetailedDashboard() {
+    const now = new Date();
+    const todayStart = new Date(now.setHours(0, 0, 0, 0));
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - 6);
+    const monthStart = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
+
+    const [
+      todayStats,
+      weekStats,
+      monthStats,
+      orderTrend,
+      userTrend,
+      gameDistribution,
+      topProviders,
+      withdrawStats,
+    ] = await Promise.all([
+      // 今日
+      this.prisma.order.aggregate({
+        _count: true,
+        _sum: { totalAmount: true, platformFee: true },
+        where: { createdAt: { gte: todayStart } },
+      }),
+      // 本周
+      this.prisma.order.aggregate({
+        _count: true,
+        _sum: { totalAmount: true, platformFee: true },
+        where: { createdAt: { gte: weekStart } },
+      }),
+      // 本月
+      this.prisma.order.aggregate({
+        _count: true,
+        _sum: { totalAmount: true, platformFee: true },
+        where: { createdAt: { gte: monthStart } },
+      }),
+      // 近7天订单趋势
+      this.prisma.$queryRaw`
+        SELECT DATE(createdAt) as date, COUNT(*) as count, COALESCE(SUM(totalAmount),0) as amount
+        FROM orders WHERE createdAt >= ${weekStart} GROUP BY DATE(createdAt) ORDER BY date
+      `,
+      // 近7天新增用户
+      this.prisma.$queryRaw`
+        SELECT DATE(createdAt) as date, COUNT(*) as count
+        FROM users WHERE createdAt >= ${weekStart} GROUP BY DATE(createdAt) ORDER BY date
+      `,
+      // 各游戏订单占比
+      this.prisma.$queryRaw`
+        SELECT g.name, COUNT(o.id) as count, COALESCE(SUM(o.totalAmount),0) as amount
+        FROM orders o JOIN service_items si ON o.serviceItemId = si.id
+        JOIN games g ON si.gameId = g.id
+        GROUP BY g.id ORDER BY count DESC LIMIT 10
+      `,
+      // 陪玩收入TOP10
+      this.prisma.providerProfile.findMany({
+        include: { user: { select: { nickname: true, avatar: true } } },
+        orderBy: { totalIncome: 'desc' },
+        take: 10,
+      }),
+      // 提现统计
+      this.prisma.withdraw.aggregate({
+        _count: true,
+        _sum: { amount: true, realAmount: true },
+        where: { status: 'PAID' },
+      }),
+    ]);
+
+    return {
+      today: { orders: todayStats._count, amount: todayStats._sum.totalAmount || 0, platformFee: todayStats._sum.platformFee || 0 },
+      week: { orders: weekStats._count, amount: weekStats._sum.totalAmount || 0, platformFee: weekStats._sum.platformFee || 0 },
+      month: { orders: monthStats._count, amount: monthStats._sum.totalAmount || 0, platformFee: monthStats._sum.platformFee || 0 },
+      orderTrend,
+      userTrend,
+      gameDistribution,
+      topProviders,
+      withdrawStats: { count: withdrawStats._count, amount: withdrawStats._sum.amount || 0, realAmount: withdrawStats._sum.realAmount || 0 },
+    };
+  }
+
+  // ==================== 客服手动派单 ====================
+  // 获取抢单池待派单列表
+  async getPoolOrders() {
+    return this.prisma.order.findMany({
+      where: { status: 'PAID', providerId: null },
+      include: {
+        serviceItem: { include: { game: true } },
+        customer: { select: { id: true, nickname: true, phone: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  // 客服手动指定陪玩接单
+  async manualAssignOrder(operatorId: number, orderId: number, providerId: number) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) throw new NotFoundException('订单不存在');
+    if (order.status !== 'PAID' || order.providerId) throw new BadRequestException('订单状态不允许手动派单');
+    const provider = await this.prisma.user.findUnique({ where: { id: providerId } });
+    if (!provider || provider.role !== 'PROVIDER') throw new BadRequestException('陪玩不存在');
+    const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
+    if (!profile || profile.applyStatus !== 'APPROVED') throw new BadRequestException('陪玩未通过入驻审核');
+
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { providerId, status: 'ASSIGNED', acceptedAt: new Date() },
+    });
+    // 通知陪玩
+    await this.prisma.message.create({
+      data: {
+        userId: providerId,
+        type: 'ORDER',
+        title: '客服派单通知',
+        content: `客服为您指派了新订单：${order.title}，请尽快开始服务`,
+        orderId,
+      },
+    });
+    this.logger.log(`客服${operatorId}手动将订单${orderId}派给陪玩${providerId}`);
+    return { success: true };
+  }
 }

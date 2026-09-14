@@ -18,6 +18,10 @@ const routes = [
       { path: 'withdraw', component: () => import('@/views/Withdraw.vue'), meta: { title: '提现', requiresAuth: true } },
       { path: 'profile', component: () => import('@/views/Profile.vue'), meta: { title: '我的' } },
       { path: 'messages', component: () => import('@/views/Messages.vue'), meta: { title: '消息', requiresAuth: true } },
+      { path: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: '聊天', requiresAuth: true } },
+      { path: 'rank', component: () => import('@/views/Rank.vue'), meta: { title: '排行榜' } },
+      { path: 'membership', component: () => import('@/views/Membership.vue'), meta: { title: '会员中心' } },
+      { path: 'invite', component: () => import('@/views/Invite.vue'), meta: { title: '邀请好友', requiresAuth: true } },
     ],
   },
 ]

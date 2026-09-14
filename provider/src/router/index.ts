@@ -16,6 +16,11 @@ const routes = [
       { path: 'services', component: () => import('@/views/Services.vue'), meta: { title: '服务管理' } },
       { path: 'my-games', component: () => import('@/views/MyGames.vue'), meta: { title: '可接游戏' } },
       { path: 'messages', component: () => import('@/views/Messages.vue'), meta: { title: '消息通知' } },
+      { path: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: '聊天' } },
+      { path: 'rank', component: () => import('@/views/Rank.vue'), meta: { title: '排行榜' } },
+      { path: 'membership', component: () => import('@/views/Membership.vue'), meta: { title: '会员中心' } },
+      { path: 'invite', component: () => import('@/views/Invite.vue'), meta: { title: '邀请好友' } },
+      { path: 'deposit', component: () => import('@/views/Deposit.vue'), meta: { title: '保证金' } },
     ],
   },
 ]

@@ -28,6 +28,13 @@ model User {
   gender        Gender?  @default(UNKNOWN)
   bio           String?  @db.Text // 个人简介
   kookId        String?  @unique @db.VarChar(50) // Kook 用户ID（绑定机器人）
+  inviteCode    String?  @unique @db.VarChar(20) // 邀请码
+  inviterId     Int?     // 邀请人ID
+  depositBalance Int     @default(0) // 保证金余额（星石）
+  membershipLevel Int    @default(0) // 会员等级 0=普通 1=青铜 2=白银 3=黄金 4=钻石 5=王者
+  membershipExpireAt DateTime? // 会员到期时间
+  voiceTag      String?  @db.VarChar(50) // 声音标签：萝莉音/御姐音/青叔音/少女音等
+  totalGiftsReceived Int @default(0) // 累计收到礼物价值（星石）
   lastLoginAt   DateTime?
   lastLoginIp   String?  @db.VarChar(50)
   createdAt     DateTime @default(now())
@@ -43,6 +50,16 @@ model User {
   withdrawals   Withdraw[]
   providerProfile ProviderProfile?
   adminLogs     AdminLog[]
+  chatMessages  ChatMessage[]
+  conversationsAsUser1 Conversation[] @relation("User1Conversations")
+  conversationsAsUser2 Conversation[] @relation("User2Conversations")
+  giftSent      GiftRecord[]    @relation("GiftSender")
+  giftReceived  GiftRecord[]    @relation("GiftReceiver")
+  inviteRecords InviteRecord[]  @relation("Inviter")
+  invitedBy     InviteRecord?   @relation("Invitee")
+  commissions   CommissionRecord[]
+  skillTags     UserSkillTag[]
+  depositRecords DepositRecord[]
 
   @@index([role])
   @@index([status])
@@ -415,6 +432,209 @@ model Activity {
 
   @@index([isActive])
   @@map("activities")
+}
+
+// ==================== 即时通讯IM ====================
+
+// 会话表（一对一聊天）
+model Conversation {
+  id          Int      @id @default(autoincrement())
+  user1Id     Int
+  user1       User     @relation("User1Conversations", fields: [user1Id], references: [id])
+  user2Id     Int
+  user2       User     @relation("User2Conversations", fields: [user2Id], references: [id])
+  lastMessage String?  @db.Text // 最后一条消息摘要
+  lastMessageAt DateTime? // 最后消息时间
+  user1Unread Int      @default(0) // user1未读数
+  user2Unread Int      @default(0) // user2未读数
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  messages    ChatMessage[]
+
+  @@unique([user1Id, user2Id])
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+// 聊天消息表
+model ChatMessage {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       Int
+  sender         User     @relation(fields: [senderId], references: [id])
+  type           String   @default("text") @db.VarChar(20) // text文字 / image图片 / voice语音 / system系统
+  content        String   @db.Text // 消息内容
+  isRead         Boolean  @default(false)
+  readAt         DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("chat_messages")
+}
+
+// ==================== 会员体系 ====================
+
+// 会员等级配置表
+model MembershipLevel {
+  id          Int      @id @default(autoincrement())
+  level       Int      @unique // 等级 1-5
+  name        String   @db.VarChar(50) // 名称：青铜/白银/黄金/钻石/王者
+  price       Int      // 月费（星石）
+  icon        String?  @db.VarChar(255) // 图标
+  benefits    String?  @db.Text // 权益描述JSON
+  sortOrder   Int      @default(0)
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("membership_levels")
+}
+
+// 会员购买/续费记录
+model MembershipRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  level       Int      // 购买的等级
+  months      Int      // 购买月数
+  amount      Int      // 花费星石
+  startTime   DateTime @default(now())
+  endTime     DateTime // 到期时间
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("membership_records")
+}
+
+// ==================== 保证金体系 ====================
+
+// 保证金缴纳/退还记录
+model DepositRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  type        String   @db.VarChar(20) // DEPOSIT缴纳 / REFUND退还 / FREEZE冻结 / UNFREEZE解冻 / DEDUCT扣除
+  amount      Int      // 金额（星石）
+  balanceAfter Int     // 变动后保证金余额
+  orderId     Int?     // 关联订单（扣除保证金时）
+  remark      String?  @db.VarChar(200)
+  operatorId  Int?     // 操作人
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@map("deposit_records")
+}
+
+// ==================== 礼物打赏 ====================
+
+// 礼物配置表
+model Gift {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(50) // 礼物名称
+  icon        String   @db.VarChar(255) // 礼物图标/动画
+  price       Int      // 价格（星石）
+  category    String   @default("normal") @db.VarChar(20) // normal普通 / luxury豪华 / special特效
+  animation   String?  @db.VarChar(255) // 特效动画URL
+  sortOrder   Int      @default(0)
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  records     GiftRecord[]
+
+  @@map("gifts")
+}
+
+// 礼物打赏记录表
+model GiftRecord {
+  id          Int      @id @default(autoincrement())
+  senderId    Int
+  sender      User     @relation("GiftSender", fields: [senderId], references: [id])
+  receiverId  Int
+  receiver    User     @relation("GiftReceiver", fields: [receiverId], references: [id])
+  giftId      Int
+  gift        Gift     @relation(fields: [giftId], references: [id])
+  quantity    Int      @default(1) // 数量
+  totalAmount Int      // 总价值（星石）
+  orderId     Int?     // 关联订单（订单内打赏）
+  message     String?  @db.VarChar(200) // 附言
+  createdAt   DateTime @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([createdAt])
+  @@map("gift_records")
+}
+
+// ==================== 分销/邀请 ====================
+
+// 邀请记录表
+model InviteRecord {
+  id          Int      @id @default(autoincrement())
+  inviterId   Int      // 邀请人
+  inviter     User     @relation("Inviter", fields: [inviterId], references: [id])
+  inviteeId   Int      @unique // 被邀请人
+  invitee     User     @relation("Invitee", fields: [inviteeId], references: [id])
+  rewardAmount Int     @default(0) // 已发放奖励（星石）
+  status      String   @default("PENDING") @db.VarChar(20) // PENDING待奖励 / REWARDED已奖励
+  rewardedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([inviterId])
+  @@map("invite_records")
+}
+
+// 佣金记录表（分销提成）
+model CommissionRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int      // 获得佣金的用户（上级）
+  user        User     @relation(fields: [userId], references: [id])
+  fromUserId  Int      // 产生消费的下级用户
+  orderId     Int?     // 关联订单
+  amount      Int      // 佣金金额（星石）
+  rate        Float    // 佣金比例
+  status      String   @default("PENDING") @db.VarChar(20) // PENDING待结算 / SETTLED已结算
+  settledAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([fromUserId])
+  @@map("commission_records")
+}
+
+// ==================== 技能/声音标签 ====================
+
+// 标签配置表
+model SkillTag {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // 标签名称：萝莉音/御姐音/技术流/娱乐型等
+  category    String   @default("voice") @db.VarChar(20) // voice声音 / skill技能 / style风格
+  icon        String?  @db.VarChar(255)
+  sortOrder   Int      @default(0)
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  users       UserSkillTag[]
+
+  @@map("skill_tags")
+}
+
+// 用户标签关联表
+model UserSkillTag {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tagId       Int
+  tag         SkillTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, tagId])
+  @@index([tagId])
+  @@map("user_skill_tags")
 }
 
 // ==================== 枚举定义 ====================
