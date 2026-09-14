@@ -44,7 +44,15 @@ export class PaymentController {
   @UseGuards(JwtAuthGuard)
   @Post('recharge')
   async recharge(@Req() req: any, @Body() body: { amount: number }) {
-    const userId = req.user.id;
+    console.log('=== 充值请求 ===');
+    console.log('req.user:', JSON.stringify(req.user));
+    console.log('req.user.id:', req.user?.id);
+    console.log('body:', JSON.stringify(body));
+
+    const userId = req.user?.id;
+    if (!userId) {
+      return { code: 401, message: '用户未登录或ID无效', data: null };
+    }
     const result = await this.paymentService.createRecharge(userId, body.amount, req.user.nickname);
     return { code: 0, message: 'success', data: result };
   }

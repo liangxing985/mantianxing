@@ -127,6 +127,7 @@ export class PaymentService {
    * 创建充值订单
    */
   async createRecharge(userId: number, amountYuan: number, payerName?: string) {
+    if (!userId) throw new Error('用户ID无效');
     if (amountYuan <= 0) throw new Error('金额必须大于0');
 
     const cfg = await this.getConfig();
@@ -136,10 +137,12 @@ export class PaymentService {
     const coinAmount = Math.floor(amountYuan * cfg.COIN_RATE);
     const outOrderNo = `RECHARGE${Date.now()}${Math.floor(Math.random() * 10000)}`;
 
+    this.logger.log(`创建充值订单: userId=${userId}, amount=${amountYuan}, outOrderNo=${outOrderNo}`);
+
     // 1. 先在本地创建待支付订单
     const order = await this.prisma.paymentOrder.create({
       data: {
-        userId,
+        user: { connect: { id: userId } },
         outOrderNo,
         amount: amountYuan.toFixed(2),
         coinAmount,
@@ -147,6 +150,8 @@ export class PaymentService {
         payStatus: 'pending_pay',
       },
     });
+
+    this.logger.log(`本地订单创建成功: orderId=${order.id}`);
 
     // 2. 调用 ShareFlow 创建支付订单
     const params: Record<string, any> = {
