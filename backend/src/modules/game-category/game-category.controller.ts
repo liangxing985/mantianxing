@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { GameCategoryService } from './game-category.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 
@@ -15,28 +16,28 @@ export class GameCategoryController {
 
   // 管理端接口
   @Get('admin/list')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'OPERATOR')
   async list() {
     return this.service.list();
   }
 
   @Post('admin')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'OPERATOR')
-  async create(@Body() body: { name: string; icon?: string; sortOrder?: number }) {
+  async create(@Body() body: { name: string; icon?: string; sortOrder?: number; isEnabled?: boolean }) {
     return this.service.create(body);
   }
 
   @Put('admin/:id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'OPERATOR')
   async update(@Param('id') id: number, @Body() body: any) {
     return this.service.update(id, body);
   }
 
   @Delete('admin/:id')
-  @UseGuards(RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
   async delete(@Param('id') id: number) {
     return this.service.delete(id);
