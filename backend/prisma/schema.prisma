@@ -61,6 +61,7 @@ model User {
   skillTags     UserSkillTag[]
   depositRecords DepositRecord[]
   userCoupons   UserCoupon[]
+  paymentOrders PaymentOrder[]
   dispatchRecordsAsOperator DispatchRecord[] @relation("DispatchOperator")
   dispatchRecordsAsFrom DispatchRecord[]     @relation("DispatchFrom")
   dispatchRecordsAsTo DispatchRecord[]       @relation("DispatchTo")
@@ -524,6 +525,34 @@ model Banner {
 
   @@index([isActive])
   @@map("banners")
+}
+
+// ==================== 支付订单（ShareFlow码支付） ====================
+
+model PaymentOrder {
+  id            Int      @id @default(autoincrement())
+  userId        Int      // 下单用户ID
+  outOrderNo    String   @unique @db.VarChar(64) // 商户订单号
+  shareflowNo   String?  @db.VarChar(64) // ShareFlow系统订单号
+  amount        Decimal  @db.Decimal(10, 2) // 支付金额（元）
+  coinAmount    Int      // 兑换星石数量
+  productName   String   @db.VarChar(200) // 商品名称
+  payStatus     String   @default("pending_pay") @db.VarChar(20) // pending_pay/pending_confirm/paid/expired
+  payUrl        String?  @db.VarChar(500) // 支付页面地址
+  wechatQr      String?  @db.Text // 微信二维码
+  alipayQr      String?  @db.Text // 支付宝二维码
+  paidAt        DateTime? // 支付时间
+  expireAt      DateTime? // 过期时间
+  transactionId String?  @db.VarChar(100) // 微信/支付宝交易号
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([outOrderNo])
+  @@index([payStatus])
+  @@map("payment_orders")
 }
 
 // ==================== 即时通讯IM ====================

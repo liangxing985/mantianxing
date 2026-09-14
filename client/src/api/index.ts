@@ -27,6 +27,11 @@ export const getTransactions = (params: any) => request.get('/wallet/transaction
 export const createWithdraw = (data: any) => request.post('/wallet/withdraw', data)
 export const getWithdrawList = (params: any) => request.get('/wallet/withdraw/list', { params })
 
+// 支付（ShareFlow码支付）
+export const createRecharge = (amount: number) => request.post('/payment/recharge', { amount })
+export const queryPaymentStatus = (orderId: number) => request.get(`/payment/status/${orderId}`)
+export const getRechargeList = (params: any) => request.get('/payment/recharges', { params })
+
 // 消息
 export const getMessages = (params: any) => request.get('/message/list', { params })
 export const readMessage = (id: number) => request.put(`/message/${id}/read`)

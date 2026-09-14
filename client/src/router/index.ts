@@ -16,6 +16,7 @@ const routes = [
       { path: 'order/:id', component: () => import('@/views/OrderDetail.vue'), meta: { title: '订单详情', requiresAuth: true } },
       { path: 'wallet', component: () => import('@/views/Wallet.vue'), meta: { title: '我的钱包', requiresAuth: true } },
       { path: 'withdraw', component: () => import('@/views/Withdraw.vue'), meta: { title: '提现', requiresAuth: true } },
+      { path: 'recharge', component: () => import('@/views/Recharge.vue'), meta: { title: '充值', requiresAuth: true } },
       { path: 'profile', component: () => import('@/views/Profile.vue'), meta: { title: '我的' } },
       { path: 'messages', component: () => import('@/views/Messages.vue'), meta: { title: '消息', requiresAuth: true } },
       { path: 'chat', component: () => import('@/views/Chat.vue'), meta: { title: '聊天', requiresAuth: true } },

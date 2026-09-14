@@ -26,6 +26,7 @@ import { TagModule } from './modules/tag/tag.module';
 import { GameCategoryModule } from './modules/game-category/game-category.module';
 import { CouponModule } from './modules/coupon/coupon.module';
 import { BannerModule } from './modules/banner/banner.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { BannerModule } from './modules/banner/banner.module';
     GameCategoryModule,
     CouponModule,
     BannerModule,
+    PaymentModule,
   ],
 })
 export class AppModule {}

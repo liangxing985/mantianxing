@@ -13,7 +13,7 @@
         <div class="frozen-label">冻结中: {{ wallet?.frozen || 0 }} 星石</div>
       </div>
       <div class="balance-right">
-        <button class="btn-recharge" @click="showRecharge = true">充值星石</button>
+        <button class="btn-recharge" @click="$router.push('/recharge')">充值星石</button>
         <button class="btn-withdraw" @click="$router.push('/withdraw')">申请提现</button>
       </div>
     </div>
