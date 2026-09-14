@@ -76,6 +76,10 @@
           <el-icon><Setting /></el-icon>
           <template #title>系统设置</template>
         </el-menu-item>
+        <el-menu-item index="/payment-config">
+          <el-icon><Wallet /></el-icon>
+          <template #title>支付配置</template>
+        </el-menu-item>
       </el-menu>
       <div class="sidebar-footer" v-if="!collapsed">
         <div class="version">v1.0.0</div>
@@ -164,7 +168,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Fold, Expand, ArrowDown, DataAnalysis, DataLine, User, UserFilled, Avatar, Goods, Promotion, Document, Checked, Money, Box, Setting } from '@element-plus/icons-vue'
+import { Fold, Expand, ArrowDown, DataAnalysis, DataLine, User, UserFilled, Avatar, Goods, Promotion, Document, Checked, Money, Box, Setting, Wallet } from '@element-plus/icons-vue'
 import { getProfile, updateProfile, getSystemConfig } from '@/api'
 
 const route = useRoute()

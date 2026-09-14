@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import * as crypto from 'crypto';
 import * as https from 'https';
 import * as http from 'http';
@@ -8,26 +9,37 @@ import * as http from 'http';
 export class PaymentService {
   private readonly logger = new Logger('PaymentService');
 
-  // ShareFlow 配置
-  private readonly API_BASE = process.env.SHAREFLOW_API_BASE || 'http://118.25.48.22:8080/api/v1';
-  private readonly API_ROOT = process.env.SHAREFLOW_API_ROOT || 'http://118.25.48.22:8080';
-  private readonly APP_ID = process.env.SHAREFLOW_APP_ID || 'peiwan_app_001';
-  private readonly API_KEY = process.env.SHAREFLOW_API_KEY || '';
-  private readonly COIN_RATE = Number(process.env.COIN_EXCHANGE_RATE || 10); // 1元=多少星石
+  constructor(
+    private prisma: PrismaService,
+    private configService: SystemConfigService,
+  ) {}
 
-  constructor(private prisma: PrismaService) {}
+  // 从数据库读取配置
+  private async getConfig() {
+    const [enabled, apiBase, apiRoot, appId, apiKey, coinRate] = await Promise.all([
+      this.configService.get('payment_enabled'),
+      this.configService.get('payment_shareflow_api_base'),
+      this.configService.get('payment_shareflow_api_root'),
+      this.configService.get('payment_shareflow_app_id'),
+      this.configService.get('payment_shareflow_api_key'),
+      this.configService.getNumber('coin_exchange_rate'),
+    ]);
+    return {
+      enabled: enabled === 'true',
+      API_BASE: apiBase || 'http://118.25.48.22:8080/api/v1',
+      API_ROOT: apiRoot || 'http://118.25.48.22:8080',
+      APP_ID: appId || 'peiwan_app_001',
+      API_KEY: apiKey || '',
+      COIN_RATE: coinRate || 10,
+    };
+  }
 
   // ========== 签名算法 ==========
 
   /**
    * 生成MD5签名
-   * 1. 移除sign和空值参数
-   * 2. 按ASCII排序
-   * 3. 拼接 key=value&...
-   * 4. 末尾拼接 &key=API_KEY
-   * 5. MD5加密（32位小写）
    */
-  generateSign(params: Record<string, any>): string {
+  generateSign(params: Record<string, any>, apiKey: string): string {
     const filtered: Record<string, string> = {};
     for (const [k, v] of Object.entries(params)) {
       if (k === 'sign') continue;
@@ -35,17 +47,17 @@ export class PaymentService {
       filtered[k] = String(v);
     }
     const sortedKeys = Object.keys(filtered).sort();
-    const signStr = sortedKeys.map(k => `${k}=${filtered[k]}`).join('&') + `&key=${this.API_KEY}`;
+    const signStr = sortedKeys.map(k => `${k}=${filtered[k]}`).join('&') + `&key=${apiKey}`;
     return crypto.createHash('md5').update(signStr).digest('hex');
   }
 
   /**
    * 验证签名
    */
-  verifySign(params: Record<string, any>): boolean {
+  verifySign(params: Record<string, any>, apiKey: string): boolean {
     const sign = params.sign;
     if (!sign) return false;
-    const expected = this.generateSign({ ...params });
+    const expected = this.generateSign({ ...params }, apiKey);
     return sign === expected;
   }
 
@@ -117,7 +129,11 @@ export class PaymentService {
   async createRecharge(userId: number, amountYuan: number, payerName?: string) {
     if (amountYuan <= 0) throw new Error('金额必须大于0');
 
-    const coinAmount = Math.floor(amountYuan * this.COIN_RATE);
+    const cfg = await this.getConfig();
+    if (!cfg.enabled) throw new Error('支付功能未启用');
+    if (!cfg.API_KEY) throw new Error('支付密钥未配置');
+
+    const coinAmount = Math.floor(amountYuan * cfg.COIN_RATE);
     const outOrderNo = `RECHARGE${Date.now()}${Math.floor(Math.random() * 10000)}`;
 
     // 1. 先在本地创建待支付订单
@@ -134,7 +150,7 @@ export class PaymentService {
 
     // 2. 调用 ShareFlow 创建支付订单
     const params: Record<string, any> = {
-      app_id: this.APP_ID,
+      app_id: cfg.APP_ID,
       out_order_no: outOrderNo,
       total_amount: amountYuan.toFixed(2),
       product_name: `星石充值${amountYuan}元`,
@@ -143,10 +159,10 @@ export class PaymentService {
       timestamp: Math.floor(Date.now() / 1000).toString(),
     };
     if (payerName) params.payer_name = payerName;
-    params.sign = this.generateSign(params);
+    params.sign = this.generateSign(params, cfg.API_KEY);
 
     try {
-      const res: any = await this.post(`${this.API_BASE}/payment/create`, params);
+      const res: any = await this.post(`${cfg.API_BASE}/payment/create`, params);
       if (res.code !== 0) {
         await this.prisma.paymentOrder.update({
           where: { id: order.id },
@@ -156,7 +172,7 @@ export class PaymentService {
       }
 
       const data = res.data;
-      const payFullUrl = this.API_ROOT + data.pay_url;
+      const payFullUrl = cfg.API_ROOT + data.pay_url;
 
       // 3. 更新本地订单
       await this.prisma.paymentOrder.update({
@@ -205,7 +221,8 @@ export class PaymentService {
     // 向 ShareFlow 查询最新状态
     if (order.shareflowNo) {
       try {
-        const res: any = await this.get(`${this.API_BASE}/payment/status/${order.shareflowNo}`);
+        const cfg = await this.getConfig();
+        const res: any = await this.get(`${cfg.API_BASE}/payment/status/${order.shareflowNo}`);
         if (res.code === 0 && res.data) {
           const status = res.data.pay_status;
           // 如果状态变化，更新本地
@@ -236,8 +253,10 @@ export class PaymentService {
    * 接收 ShareFlow 回调
    */
   async handleNotify(body: any) {
+    const cfg = await this.getConfig();
+
     // 1. 验证签名
-    if (!this.verifySign({ ...body })) {
+    if (!this.verifySign({ ...body }, cfg.API_KEY)) {
       this.logger.warn('回调签名验证失败: ' + JSON.stringify(body));
       return { code: -1, msg: '签名验证失败' };
     }

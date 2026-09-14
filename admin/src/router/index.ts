@@ -96,6 +96,12 @@ const routes = [
         meta: { title: '系统设置', icon: 'Setting' },
       },
       {
+        path: 'payment-config',
+        name: 'PaymentConfig',
+        component: () => import('@/views/PaymentConfig.vue'),
+        meta: { title: '支付配置', icon: 'Wallet' },
+      },
+      {
         path: 'data-dashboard',
         name: 'DataDashboard',
         component: () => import('@/views/DataDashboard.vue'),

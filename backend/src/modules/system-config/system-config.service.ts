@@ -20,6 +20,12 @@ const DEFAULT_CONFIGS: Record<string, { value: string; description: string }> = 
   },
   gift_platform_fee_rate: { value: '20', description: '礼物打赏平台抽成比例（%）' },
   invite_commission_rate: { value: '10', description: '邀请分销佣金比例（%）' },
+  // 支付配置（ShareFlow码支付）
+  payment_enabled: { value: 'false', description: '是否启用码支付充值' },
+  payment_shareflow_api_base: { value: 'http://118.25.48.22:8080/api/v1', description: 'ShareFlow API根地址' },
+  payment_shareflow_api_root: { value: 'http://118.25.48.22:8080', description: 'ShareFlow支付页根地址' },
+  payment_shareflow_app_id: { value: 'peiwan_app_001', description: 'ShareFlow商户ID/AppID' },
+  payment_shareflow_api_key: { value: '', description: 'ShareFlow通信密钥（32位）' },
 };
 
 @Injectable()
