@@ -1,166 +1,274 @@
 <template>
-  <div class="order-create">
-    <van-nav-bar :title="fromProvider ? '陪玩下单' : '确认订单'" left-arrow @click-left="$router.back()" />
+  <div class="order-create-page">
+    <div class="page-header">
+      <button class="back-btn" @click="$router.back()">← 返回</button>
+      <h1 class="page-title">{{ fromProvider ? '陪玩下单' : '确认订单' }}</h1>
+    </div>
 
-    <!-- 商品模式：商品信息（移到订单信息里） -->
-    <!-- 陪玩模式：陪玩信息 -->
-    <van-cell-group inset v-if="fromProvider" style="margin-top: 12px;">
-      <van-cell title="游戏" :value="gameName" />
-      <van-cell title="当前陪玩" :value="providerName" />
-      <van-cell title="当前陪玩单价" :value="providerPrice + ' 星石/小时'" />
-    </van-cell-group>
+    <div class="order-content">
+      <!-- 左侧：表单区域 -->
+      <div class="form-section">
+        <!-- 陪玩模式：陪玩信息 -->
+        <div v-if="fromProvider" class="card">
+          <h3 class="card-title">服务信息</h3>
+          <div class="info-row">
+            <span class="info-label">游戏</span>
+            <span class="info-value">{{ gameName }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">当前陪玩</span>
+            <span class="info-value">{{ providerName }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">陪玩单价</span>
+            <span class="info-value price">{{ providerPrice }} 星石/小时</span>
+          </div>
+        </div>
 
-    <!-- 陪玩模式：单陪/双陪切换 -->
-    <van-cell-group inset v-if="fromProvider" title="接单模式" style="margin-top: 12px;">
-      <van-cell
-        title="单陪"
-        :label="`仅 ${providerName} 一人服务`"
-        is-link
-        @click="playMode = 'single'"
-      >
-        <template #right-icon>
-          <van-icon v-if="playMode === 'single'" name="success" color="#07c160" />
-        </template>
-      </van-cell>
-      <van-cell
-        title="双陪"
-        :label="secondProvider ? `已选：${secondProvider.nickname}` : '点击选择第二位陪玩'"
-        is-link
-        @click="playMode = 'double'; if (!secondProvider) openSecondPicker()"
-      >
-        <template #right-icon>
-          <van-icon v-if="playMode === 'double'" name="success" color="#07c160" />
-        </template>
-      </van-cell>
-      <van-cell v-if="playMode === 'double' && secondProvider" title="第二位陪玩单价" :value="secondProviderPrice + ' 星石/小时'" />
-    </van-cell-group>
+        <!-- 陪玩模式：单陪/双陪切换 -->
+        <div v-if="fromProvider" class="card">
+          <h3 class="card-title">接单模式</h3>
+          <div class="mode-options">
+            <div
+              class="mode-option"
+              :class="{ active: playMode === 'single' }"
+              @click="playMode = 'single'"
+            >
+              <div class="mode-radio">
+                <span v-if="playMode === 'single'" class="radio-dot"></span>
+              </div>
+              <div class="mode-info">
+                <div class="mode-name">单陪</div>
+                <div class="mode-desc">仅 {{ providerName }} 一人服务</div>
+              </div>
+            </div>
+            <div
+              class="mode-option"
+              :class="{ active: playMode === 'double' }"
+              @click="playMode = 'double'; if (!secondProvider) showSecondPicker = true"
+            >
+              <div class="mode-radio">
+                <span v-if="playMode === 'double'" class="radio-dot"></span>
+              </div>
+              <div class="mode-info">
+                <div class="mode-name">双陪</div>
+                <div class="mode-desc">{{ secondProvider ? `已选：${secondProvider.nickname}` : '点击选择第二位陪玩' }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="playMode === 'double' && secondProvider" class="info-row" style="margin-top: 12px;">
+            <span class="info-label">第二位陪玩单价</span>
+            <span class="info-value price">{{ secondProviderPrice }} 星石/小时</span>
+          </div>
+        </div>
 
-    <!-- 商品模式：陪玩选择 -->
-    <van-cell-group inset v-if="!fromProvider" title="选择陪玩" style="margin-top: 12px;">
-      <van-cell
-        title="暂不选择"
-        :value="assignMode === 'none' ? '已选' : ''"
-        is-link
-        @click="assignMode = 'none'; selectedProviders = []"
-      >
-        <template #right-icon>
-          <van-icon v-if="assignMode === 'none'" name="success" color="#07c160" />
-        </template>
-      </van-cell>
-      <van-cell
-        title="指定陪玩（可指定自己喜欢的1-2名陪陪）"
-        :value="selectedProviders.length > 0 ? selectedProviders.length + '人' : ''"
-        is-link
-        @click="openProviderPicker"
-      >
-        <template #right-icon>
-          <van-icon v-if="assignMode === '指定'" name="success" color="#07c160" />
-        </template>
-      </van-cell>
-      <div v-if="selectedProviders.length > 0" class="selected-providers">
-        <van-tag v-for="p in selectedProviders" :key="p.id" closable type="primary" @close="removeProvider(p)">
-          {{ p.nickname }}
-        </van-tag>
-      </div>
-    </van-cell-group>
+        <!-- 商品模式：陪玩选择 -->
+        <div v-if="!fromProvider" class="card">
+          <h3 class="card-title">选择陪玩</h3>
+          <div class="mode-options">
+            <div
+              class="mode-option"
+              :class="{ active: assignMode === 'none' }"
+              @click="assignMode = 'none'; selectedProviders = []"
+            >
+              <div class="mode-radio">
+                <span v-if="assignMode === 'none'" class="radio-dot"></span>
+              </div>
+              <div class="mode-info">
+                <div class="mode-name">暂不选择</div>
+                <div class="mode-desc">系统自动分配陪玩</div>
+              </div>
+            </div>
+            <div
+              class="mode-option"
+              :class="{ active: assignMode === '指定' }"
+              @click="showProviderPicker = true"
+            >
+              <div class="mode-radio">
+                <span v-if="assignMode === '指定'" class="radio-dot"></span>
+              </div>
+              <div class="mode-info">
+                <div class="mode-name">指定陪玩</div>
+                <div class="mode-desc">可指定自己喜欢的1-2名陪陪</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="selectedProviders.length > 0" class="selected-tags">
+            <span v-for="p in selectedProviders" :key="p.id" class="tag-item">
+              {{ p.nickname }}
+              <button class="tag-close" @click="removeProvider(p)">×</button>
+            </span>
+          </div>
+        </div>
 
-    <van-form @submit="handleSubmit">
-      <van-cell-group inset title="订单信息" style="margin-top: 12px;">
-        <!-- 商品模式：显示商品完整信息 -->
-        <template v-if="!fromProvider && productName">
-          <van-cell title="商品" :value="productName" />
-          <van-cell v-if="productGameName" title="游戏" :value="productGameName" />
-          <van-cell v-if="productDescription" title="描述" :value="productDescription" />
-          <van-cell title="单价" :value="productPrice + ' 星石'" />
-        </template>
-        <van-field name="duration" label="时长(小时)" :model-value="form.duration" type="digit" @update:model-value="v => form.duration = Number(v)" />
-        <van-field label="总计">
-          <template #input>
-            <span style="color: #f5576c; font-weight: 600; font-size: 18px;">{{ totalAmount }} 星石</span>
+        <!-- 订单信息 -->
+        <div class="card">
+          <h3 class="card-title">订单信息</h3>
+          <template v-if="!fromProvider && productName">
+            <div class="info-row">
+              <span class="info-label">商品</span>
+              <span class="info-value">{{ productName }}</span>
+            </div>
+            <div v-if="productGameName" class="info-row">
+              <span class="info-label">游戏</span>
+              <span class="info-value">{{ productGameName }}</span>
+            </div>
+            <div v-if="productDescription" class="info-row">
+              <span class="info-label">描述</span>
+              <span class="info-value">{{ productDescription }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">单价</span>
+              <span class="info-value price">{{ productPrice }} 星石</span>
+            </div>
           </template>
-        </van-field>
-      </van-cell-group>
+          <div class="form-row">
+            <label class="form-label">时长（小时）</label>
+            <input
+              type="number"
+              class="form-input"
+              v-model.number="form.duration"
+              min="1"
+              max="24"
+            />
+          </div>
+          <div class="form-row">
+            <label class="form-label">总计</label>
+            <span class="total-price">{{ totalAmount }} 星石</span>
+          </div>
+        </div>
 
-      <van-cell-group inset title="联系方式" style="margin-top: 12px;">
-        <van-field label="联系类型" is-link readonly placeholder="选择" :model-value="contactTypeText" @click="showContactPicker = true" />
-        <van-field v-model="form.contactValue" label="账号" placeholder="请输入游戏账号/QQ/微信" />
-      </van-cell-group>
+        <!-- 联系方式 -->
+        <div class="card">
+          <h3 class="card-title">联系方式</h3>
+          <div class="form-row">
+            <label class="form-label">联系类型</label>
+            <select class="form-select" v-model="form.contactType">
+              <option value="QQ">QQ</option>
+              <option value="WECHAT">微信</option>
+              <option value="GAME_ID">游戏ID</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">账号</label>
+            <input
+              type="text"
+              class="form-input"
+              v-model="form.contactValue"
+              placeholder="请输入游戏账号/QQ/微信"
+            />
+          </div>
+        </div>
 
-      <van-cell-group inset title="订单要求" style="margin-top: 12px;">
-        <van-field v-model="form.requirement" type="textarea" label="备注" placeholder="如：上分目标、段位要求等" rows="3" autosize />
-      </van-cell-group>
-
-      <div style="padding: 16px;">
-        <van-button round block type="primary" native-type="submit" :loading="loading">
-          确认下单（{{ totalAmount }}星石）
-        </van-button>
-        <p style="text-align: center; font-size: 12px; color: #999; margin-top: 12px;">
-          下单后星石将被冻结，服务完成审核通过后结算给陪玩
-        </p>
+        <!-- 订单要求 -->
+        <div class="card">
+          <h3 class="card-title">订单要求</h3>
+          <textarea
+            class="form-textarea"
+            v-model="form.requirement"
+            placeholder="如：上分目标、段位要求等"
+            rows="3"
+          ></textarea>
+        </div>
       </div>
-    </van-form>
+
+      <!-- 右侧：订单摘要 -->
+      <div class="summary-section">
+        <div class="card summary-card">
+          <h3 class="card-title">订单摘要</h3>
+          <div class="summary-row">
+            <span>服务类型</span>
+            <span>{{ fromProvider ? '陪玩服务' : '商品服务' }}</span>
+          </div>
+          <div class="summary-row">
+            <span>时长</span>
+            <span>{{ form.duration }} 小时</span>
+          </div>
+          <div v-if="fromProvider && playMode === 'double'" class="summary-row">
+            <span>陪玩人数</span>
+            <span>双陪（2人）</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-total">
+            <span>应付金额</span>
+            <span class="total-amount">{{ totalAmount }} 星石</span>
+          </div>
+          <button class="submit-btn" @click="handleSubmit" :disabled="loading">
+            <span v-if="loading">提交中...</span>
+            <span v-else>确认下单（{{ totalAmount }}星石）</span>
+          </button>
+          <p class="submit-tip">下单后星石将被冻结，服务完成审核通过后结算给陪玩</p>
+        </div>
+      </div>
+    </div>
 
     <!-- 第二位陪玩选择弹窗 -->
-    <van-popup v-model:show="showSecondPicker" position="bottom" round style="height: 70%;">
-      <div class="picker-header">
-        <span>选择第二位陪玩</span>
-        <van-button size="small" type="primary" @click="confirmSecond">确定</van-button>
-      </div>
-      <div class="provider-list">
-        <div
-          v-for="p in providers"
-          :key="p.id"
-          class="provider-item"
-          :class="{ selected: tempSecondId === p.id }"
-          @click="selectSecond(p)"
-        >
-          <van-image round width="48" height="48" :src="p.avatar || defaultAvatar" />
-          <div class="provider-info">
-            <div class="name">{{ p.nickname }}</div>
-            <div class="meta">{{ p.providerProfile?.rank || '未设置' }} · {{ p._price ? p._price + '星石/小时' : '未定价' }}</div>
-          </div>
-          <van-icon v-if="tempSecondId === p.id" name="success" color="#07c160" />
+    <div v-if="showSecondPicker" class="modal-overlay" @click.self="showSecondPicker = false">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>选择第二位陪玩</h3>
+          <button class="modal-close" @click="showSecondPicker = false">×</button>
         </div>
-        <div v-if="providers.length === 0" style="text-align: center; color: #999; padding: 40px;">暂无店内陪玩</div>
+        <div class="modal-body">
+          <div
+            v-for="p in providers"
+            :key="p.id"
+            class="provider-item"
+            :class="{ selected: tempSecondId === p.id }"
+            @click="selectSecond(p)"
+          >
+            <img :src="p.avatar || defaultAvatar" class="provider-avatar" />
+            <div class="provider-info">
+              <div class="name">{{ p.nickname }}</div>
+              <div class="meta">{{ p.providerProfile?.rank || '未设置' }} · {{ p._price ? p._price + '星石/小时' : '未定价' }}</div>
+            </div>
+            <span v-if="tempSecondId === p.id" class="check-icon">✓</span>
+          </div>
+          <div v-if="providers.length === 0" class="empty-text">暂无店内陪玩</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="showSecondPicker = false">取消</button>
+          <button class="btn-primary" @click="confirmSecond">确定</button>
+        </div>
       </div>
-    </van-popup>
+    </div>
 
     <!-- 商品模式陪玩选择弹窗 -->
-    <van-popup v-model:show="showProviderPicker" position="bottom" round style="height: 70%;">
-      <div class="picker-header">
-        <span>选择陪玩（最多2人）</span>
-        <van-button size="small" type="primary" @click="confirmProviders">确定</van-button>
-      </div>
-      <div class="provider-list">
-        <div
-          v-for="p in providers"
-          :key="p.id"
-          class="provider-item"
-          :class="{ selected: tempSelected.includes(p.id) }"
-          @click="toggleProvider(p)"
-        >
-          <van-image round width="48" height="48" :src="p.avatar || defaultAvatar" />
-          <div class="provider-info">
-            <div class="name">{{ p.nickname }}</div>
-            <div class="meta">{{ p.providerProfile?.rank || '未设置' }} · {{ p.providerProfile?.games?.length || 0 }}款游戏</div>
-          </div>
-          <van-icon v-if="tempSelected.includes(p.id)" name="success" color="#07c160" />
+    <div v-if="showProviderPicker" class="modal-overlay" @click.self="showProviderPicker = false">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>选择陪玩（最多2人）</h3>
+          <button class="modal-close" @click="showProviderPicker = false">×</button>
         </div>
-        <div v-if="providers.length === 0" style="text-align: center; color: #999; padding: 40px;">暂无店内陪玩</div>
+        <div class="modal-body">
+          <div
+            v-for="p in providers"
+            :key="p.id"
+            class="provider-item"
+            :class="{ selected: tempSelected.includes(p.id) }"
+            @click="toggleProvider(p)"
+          >
+            <img :src="p.avatar || defaultAvatar" class="provider-avatar" />
+            <div class="provider-info">
+              <div class="name">{{ p.nickname }}</div>
+              <div class="meta">{{ p.providerProfile?.rank || '未设置' }} · {{ p.providerProfile?.games?.length || 0 }}款游戏</div>
+            </div>
+            <span v-if="tempSelected.includes(p.id)" class="check-icon">✓</span>
+          </div>
+          <div v-if="providers.length === 0" class="empty-text">暂无店内陪玩</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" @click="showProviderPicker = false">取消</button>
+          <button class="btn-primary" @click="confirmProviders">确定</button>
+        </div>
       </div>
-    </van-popup>
-
-    <!-- 联系方式选择 -->
-    <van-popup v-model:show="showContactPicker" position="bottom" round>
-      <van-picker :columns="contactOptions" @confirm="onContactConfirm" @cancel="showContactPicker = false" />
-    </van-popup>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, showConfirmDialog } from 'vant'
 import { getProviderList, createOrder, getWallet, getGameList, getProviderDetail } from '@/api'
 
 const route = useRoute()
@@ -196,8 +304,6 @@ const tempSelected = ref<number[]>([])
 const assignMode = ref<'none' | '指定'>('none')
 const showProviderPicker = ref(false)
 
-const showContactPicker = ref(false)
-
 const form = reactive({
   serviceItemId: 0,
   gameId: gameId || productGameId || 0,
@@ -206,13 +312,6 @@ const form = reactive({
   contactValue: '',
   requirement: '',
 })
-
-const contactOptions = [
-  { text: 'QQ', value: 'QQ' },
-  { text: '微信', value: 'WECHAT' },
-  { text: '游戏ID', value: 'GAME_ID' },
-]
-const contactTypeText = computed(() => contactOptions.find(o => o.value === form.contactType)?.text || '')
 
 // 总价计算
 const totalAmount = computed(() => {
@@ -229,10 +328,8 @@ const loadData = async () => {
   try {
     const res: any = await getProviderList({ page: 1, pageSize: 50, isOnline: true })
     const list = res.list || res.data?.list || []
-    // 陪玩模式下排除当前陪玩，并为每个陪玩加载该游戏的价格
     if (fromProvider && gameId) {
       providers.value = list.filter((p: any) => p.id !== providerId)
-      // 为每个陪玩加载价格
       for (const p of providers.value) {
         try {
           const detail: any = await getProviderDetail(p.id)
@@ -247,7 +344,6 @@ const loadData = async () => {
   } catch (e) {
     providers.value = []
   }
-  // 商品模式：获取第一个服务项目
   if (!fromProvider) {
     try {
       const games: any = await getGameList()
@@ -265,17 +361,13 @@ const selectSecond = (p: any) => {
   tempSecondId.value = p.id
 }
 const confirmSecond = () => {
-  if (!tempSecondId.value) { showToast('请选择第二位陪玩'); return }
+  if (!tempSecondId.value) { alert('请选择第二位陪玩'); return }
   const p = providers.value.find(x => x.id === tempSecondId.value)
   if (!p) return
-  if (!p._price || p._price <= 0) { showToast('该陪玩未设置此游戏价格'); return }
+  if (!p._price || p._price <= 0) { alert('该陪玩未设置此游戏价格'); return }
   secondProvider.value = p
   secondProviderPrice.value = p._price
   showSecondPicker.value = false
-}
-const openSecondPicker = () => {
-  tempSecondId.value = secondProvider.value?.id || 0
-  showSecondPicker.value = true
 }
 
 // 商品模式陪玩选择
@@ -284,12 +376,12 @@ const toggleProvider = (p: any) => {
   if (idx > -1) {
     tempSelected.value.splice(idx, 1)
   } else {
-    if (tempSelected.value.length >= 2) { showToast('最多选择2位陪玩'); return }
+    if (tempSelected.value.length >= 2) { alert('最多选择2位陪玩'); return }
     tempSelected.value.push(p.id)
   }
 }
 const confirmProviders = () => {
-  if (tempSelected.value.length === 0) { showToast('请至少选择1位陪玩'); return }
+  if (tempSelected.value.length === 0) { alert('请至少选择1位陪玩'); return }
   selectedProviders.value = providers.value.filter(p => tempSelected.value.includes(p.id))
   assignMode.value = '指定'
   showProviderPicker.value = false
@@ -298,38 +390,23 @@ const removeProvider = (p: any) => {
   selectedProviders.value = selectedProviders.value.filter(x => x.id !== p.id)
   if (selectedProviders.value.length === 0) assignMode.value = 'none'
 }
-const openProviderPicker = () => {
-  tempSelected.value = selectedProviders.value.map(p => p.id)
-  showProviderPicker.value = true
-}
-
-const onContactConfirm = ({ selectedOptions }: any) => {
-  form.contactType = selectedOptions[0].value
-  showContactPicker.value = false
-}
 
 const handleSubmit = async () => {
-  if (!form.contactValue) { showToast('请输入联系方式'); return }
+  if (!form.contactValue) { alert('请输入联系方式'); return }
   if (fromProvider && playMode.value === 'double' && !secondProvider.value) {
-    showToast('请选择第二位陪玩'); return
+    alert('请选择第二位陪玩'); return
   }
-  if (!fromProvider && !form.serviceItemId) { showToast('服务项目加载中，请稍后'); return }
+  if (!fromProvider && !form.serviceItemId) { alert('服务项目加载中，请稍后'); return }
 
   const wallet: any = await getWallet()
   if (wallet.balance < totalAmount.value) {
-    await showConfirmDialog({
-      title: '余额不足',
-      message: `当前余额 ${wallet.balance} 星石，需要 ${totalAmount.value} 星石，请联系客服充值`,
-      confirmButtonText: '知道了',
-      showCancelButton: false,
-    })
+    alert(`当前余额 ${wallet.balance} 星石，需要 ${totalAmount.value} 星石，请联系客服充值`)
     return
   }
 
   loading.value = true
   try {
     if (fromProvider) {
-      // 陪玩模式
       if (playMode.value === 'single') {
         const res: any = await createOrder({
           ...form,
@@ -338,10 +415,9 @@ const handleSubmit = async () => {
           overridePrice: providerPrice,
           productName: gameName,
         })
-        showToast('下单成功')
+        alert('下单成功')
         router.replace(`/order/${res.id}`)
       } else {
-        // 双陪：创建两个订单，共享orderGroup
         const orderGroup = `GRP${Date.now()}${Math.floor(Math.random() * 1000)}`
         const orders = [
           { providerId, price: providerPrice },
@@ -359,11 +435,10 @@ const handleSubmit = async () => {
           })
           if (i === 0) firstId = res.id
         }
-        showToast('双陪下单成功')
+        alert('双陪下单成功')
         router.replace(`/order/${firstId}`)
       }
     } else {
-      // 商品模式
       if (selectedProviders.value.length === 0) {
         const res: any = await createOrder({
           ...form,
@@ -371,7 +446,7 @@ const handleSubmit = async () => {
           overridePrice: productPrice || undefined,
           productName,
         })
-        showToast('下单成功，等待陪玩接单')
+        alert('下单成功，等待陪玩接单')
         router.replace(`/order/${res.id}`)
       } else {
         let firstOrderId = 0
@@ -386,12 +461,12 @@ const handleSubmit = async () => {
           })
           if (i === 0) firstOrderId = res.id
         }
-        showToast(`已为${selectedProviders.value.length}位陪玩下单`)
+        alert(`已为${selectedProviders.value.length}位陪玩下单`)
         router.replace(`/order/${firstOrderId}`)
       }
     }
   } catch (e: any) {
-    showToast(e?.response?.data?.message || '下单失败')
+    alert(e?.response?.data?.message || '下单失败')
   } finally {
     loading.value = false
   }
@@ -401,13 +476,459 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.order-create { padding-bottom: 20px; }
-.selected-providers { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
-.picker-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #f0f0f0; font-weight: 600; }
-.provider-list { padding: 8px 16px; max-height: calc(70vh - 60px); overflow-y: auto; }
-.provider-item { display: flex; align-items: center; gap: 12px; padding: 12px 8px; border-bottom: 1px solid #f5f5f5; }
-.provider-item.selected { background: #e8f5e9; border-radius: 8px; }
-.provider-info { flex: 1; }
-.provider-info .name { font-size: 15px; font-weight: 500; }
-.provider-info .meta { font-size: 12px; color: #999; margin-top: 2px; }
+.order-create-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: #6c5ce7;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.back-btn:hover {
+  background: #f5f3ff;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.order-content {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.card-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.info-label {
+  color: #999;
+  font-size: 14px;
+}
+
+.info-value {
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.info-value.price {
+  color: #f5222d;
+  font-weight: 600;
+}
+
+.mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-option:hover {
+  border-color: #c4b5fd;
+}
+
+.mode-option.active {
+  border-color: #6c5ce7;
+  background: #faf8ff;
+}
+
+.mode-radio {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d9d9d9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mode-option.active .mode-radio {
+  border-color: #6c5ce7;
+}
+
+.radio-dot {
+  width: 10px;
+  height: 10px;
+  background: #6c5ce7;
+  border-radius: 50%;
+}
+
+.mode-info {
+  flex: 1;
+}
+
+.mode-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.mode-desc {
+  font-size: 13px;
+  color: #999;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f5f3ff;
+  color: #6c5ce7;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tag-close {
+  background: none;
+  border: none;
+  color: #6c5ce7;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
+}
+
+.form-label {
+  width: 100px;
+  color: #666;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.form-input, .form-select {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: #6c5ce7;
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.1);
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-textarea:focus {
+  border-color: #6c5ce7;
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.1);
+}
+
+.total-price {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f5222d;
+}
+
+/* 右侧摘要 */
+.summary-section {
+  position: sticky;
+  top: 88px;
+}
+
+.summary-card {
+  margin-bottom: 0;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.summary-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 12px 0;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.summary-total span:first-child {
+  font-size: 15px;
+  color: #333;
+  font-weight: 500;
+}
+
+.total-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: #f5222d;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(108,92,231,0.4);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.submit-tip {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  margin: 12px 0 0;
+}
+
+/* 弹窗 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 560px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 24px;
+}
+
+.provider-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.provider-item:hover {
+  background: #fafafa;
+}
+
+.provider-item.selected {
+  background: #f0f9ff;
+}
+
+.provider-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.provider-info {
+  flex: 1;
+}
+
+.provider-info .name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+.provider-info .meta {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.check-icon {
+  width: 24px;
+  height: 24px;
+  background: #6c5ce7;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.empty-text {
+  text-align: center;
+  color: #999;
+  padding: 40px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.btn-primary {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  padding: 10px 24px;
+  background: #f5f5f5;
+  color: #666;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .order-content {
+    grid-template-columns: 1fr;
+  }
+  .summary-section {
+    position: static;
+  }
+}
 </style>
