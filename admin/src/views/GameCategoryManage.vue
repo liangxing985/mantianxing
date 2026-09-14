@@ -9,24 +9,28 @@
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column label="图标" width="80">
         <template #default="{ row }">
-          <el-image v-if="row.icon" :src="row.icon" style="width:32px;height:32px;border-radius:6px;" fit="cover" />
-          <span v-else style="color:#ccc;">-</span>
+          <template v-if="row">
+            <el-image v-if="row.icon" :src="row.icon" style="width:32px;height:32px;border-radius:6px;" fit="cover" />
+            <span v-else style="color:#ccc;">-</span>
+          </template>
         </template>
       </el-table-column>
       <el-table-column prop="name" label="分类名称" width="150" />
       <el-table-column label="游戏数量" width="100">
-        <template #default="{ row }">{{ row._count?.games || 0 }}</template>
+        <template #default="{ row }">{{ row?._count?.games || 0 }}</template>
       </el-table-column>
       <el-table-column prop="sortOrder" label="排序" width="80" />
       <el-table-column label="状态" width="100">
         <template #default="{ row }">
-          <el-tag :type="row.isEnabled ? 'success' : 'info'">{{ row.isEnabled ? '启用' : '禁用' }}</el-tag>
+          <el-tag v-if="row" :type="row.isEnabled ? 'success' : 'info'">{{ row.isEnabled ? '启用' : '禁用' }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="180" fixed="right">
         <template #default="{ row }">
-          <el-button size="small" @click="openEdit(row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          <template v-if="row">
+            <el-button size="small" @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          </template>
         </template>
       </el-table-column>
     </el-table>
