@@ -44,7 +44,7 @@ export class PaymentController {
   @UseGuards(JwtAuthGuard)
   @Post('recharge')
   async recharge(@Req() req: any, @Body() body: { amount: number }) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const result = await this.paymentService.createRecharge(userId, body.amount, req.user.nickname);
     return { code: 0, message: 'success', data: result };
   }
@@ -81,7 +81,7 @@ export class PaymentController {
     @Query('page') page = '1',
     @Query('pageSize') pageSize = '20',
   ) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const result = await this.paymentService.getUserRecharges(userId, Number(page), Number(pageSize));
     return { code: 0, message: 'success', data: result };
   }
