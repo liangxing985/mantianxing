@@ -130,13 +130,19 @@ const serviceForm = reactive({ id: null as number | null, gameId: 0, name: '', d
 const unitLabel = (val: string) => unitOptions.value.find(u => u.value === val)?.label || val
 
 const loadData = async () => {
-  const gameRes: any = await request.get('/games/list')
-  games.value = gameRes || []
-  if (games.value.length > 0) activeGames.value = [games.value[0].id]
+  try {
+    const gameRes: any = await request.get('/game/list')
+    games.value = Array.isArray(gameRes) ? gameRes : (gameRes?.list || [])
+    if (games.value.length > 0) activeGames.value = [games.value[0].id]
+  } catch (e) {
+    games.value = []
+  }
   try {
     const catRes: any = await request.get('/game-categories/admin/list')
-    categories.value = catRes || []
-  } catch (e) {}
+    categories.value = Array.isArray(catRes) ? catRes : []
+  } catch (e) {
+    categories.value = []
+  }
 }
 
 const openGameDialog = (game?: any) => {
