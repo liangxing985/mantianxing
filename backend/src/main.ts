@@ -7,6 +7,11 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { json, urlencoded } from 'express';
 
+// 全局BigInt序列化：Prisma聚合查询返回BigInt，JSON.stringify默认不支持
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 async function bootstrap() {
   // 关闭内置 bodyParser，手动配置以放宽上传大小限制（报单图片 base64）
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

@@ -713,24 +713,23 @@ export class AdminService {
     if (!order) throw new NotFoundException('订单不存在');
     if (order.status !== 'PAID' || order.providerId) throw new BadRequestException('订单状态不允许自动派单');
 
-    // 查询符合条件的陪玩（已入驻、接单中、开通该游戏服务）
+    // 查询符合条件的陪玩（已入驻、接单中）
     const providers = await this.prisma.user.findMany({
-      where: {
-        role: 'PROVIDER',
-        status: 'ACTIVE',
-        providerProfile: {
-          applyStatus: 'APPROVED',
-          acceptOrder: true,
-          games: { some: { gameId: order.gameId, isEnabled: true } },
-        },
-      },
-      include: { providerProfile: true },
+      where: { role: 'PROVIDER', status: 'ACTIVE' },
+      include: { providerProfile: { include: { games: true } } },
     });
 
-    if (providers.length === 0) throw new BadRequestException('暂无符合条件的陪玩');
+    // 过滤：已通过审核、接单中、开通该游戏
+    const eligible = providers.filter((p) => {
+      const profile = p.providerProfile;
+      if (!profile || profile.applyStatus !== 'APPROVED' || !profile.acceptOrder) return false;
+      return profile.games?.some((g) => g.gameId === order.gameId && g.status === 'APPROVED');
+    });
+
+    if (eligible.length === 0) throw new BadRequestException('暂无符合条件的陪玩');
 
     // 计算权重得分
-    const scored = providers.map((p) => {
+    const scored = eligible.map((p) => {
       const profile = p.providerProfile!;
       const onlineScore = profile.isOnline ? 40 : 10; // 在线40分，离线10分
       const ratingScore = (profile.rating / 5) * 30; // 评分满分30
@@ -741,6 +740,7 @@ export class AdminService {
     // 按得分降序，取最高分
     scored.sort((a, b) => b.score - a.score);
     const best = scored[0];
+    const bestProfile = best.provider.providerProfile!;
 
     // 派单
     await this.prisma.order.update({
@@ -755,7 +755,7 @@ export class AdminService {
         operatorId,
         toProviderId: best.provider.id,
         type: 'AUTO',
-        reason: `自动派单，权重得分${best.score.toFixed(1)}（在线${best.provider.providerProfile?.isOnline ? '是' : '否'}，评分${best.provider.providerProfile?.rating}，接单${best.provider.providerProfile?.orderCount}单）`,
+        reason: `自动派单，权重得分${best.score.toFixed(1)}（在线${bestProfile.isOnline ? '是' : '否'}，评分${bestProfile.rating}，接单${bestProfile.orderCount}单）`,
       },
     });
 
@@ -843,3 +843,4 @@ export class AdminService {
       },
     });
   }
+}
