@@ -370,26 +370,26 @@ export class PaymentService {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
-    const [todayCount, todayAgg, totalCount, totalAgg] = await Promise.all([
-      this.prisma.paymentOrder.count({
+    // 用 findMany 代替 aggregate，避免 BigInt 序列化问题
+    const [todayPaid, allPaid] = await Promise.all([
+      this.prisma.paymentOrder.findMany({
         where: { payStatus: 'paid', createdAt: { gte: todayStart } },
+        select: { amount: true },
       }),
-      this.prisma.paymentOrder.aggregate({
-        where: { payStatus: 'paid', createdAt: { gte: todayStart } },
-        _sum: { amount: true },
-      }),
-      this.prisma.paymentOrder.count({ where: { payStatus: 'paid' } }),
-      this.prisma.paymentOrder.aggregate({
+      this.prisma.paymentOrder.findMany({
         where: { payStatus: 'paid' },
-        _sum: { amount: true },
+        select: { amount: true },
       }),
     ]);
 
+    const todayAmount = todayPaid.reduce((sum, o) => sum + Number(o.amount), 0);
+    const totalAmount = allPaid.reduce((sum, o) => sum + Number(o.amount), 0);
+
     return {
-      todayCount,
-      todayAmount: Number(todayAgg._sum.amount || 0).toFixed(2),
-      totalCount,
-      totalAmount: Number(totalAgg._sum.amount || 0).toFixed(2),
+      todayCount: todayPaid.length,
+      todayAmount: todayAmount.toFixed(2),
+      totalCount: allPaid.length,
+      totalAmount: totalAmount.toFixed(2),
     };
   }
 
