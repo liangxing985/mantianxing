@@ -113,7 +113,15 @@ async function loadData() {
   loading.value = true
   try {
     const res: any = await request.get('/coupons/admin/list')
-    list.value = Array.isArray(res) ? res : []
+    if (Array.isArray(res)) {
+      list.value = res
+    } else if (res && Array.isArray(res.list)) {
+      list.value = res.list
+    } else if (res && Array.isArray(res.data)) {
+      list.value = res.data
+    } else {
+      list.value = []
+    }
   } catch (e) {
     list.value = []
   } finally {
