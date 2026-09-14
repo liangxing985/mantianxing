@@ -186,7 +186,13 @@ onMounted(async () => {
 
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => route.meta.title || '')
-const user = computed(() => JSON.parse(localStorage.getItem('admin_user') || '{}'))
+const user = computed(() => {
+  try {
+    return JSON.parse(localStorage.getItem('admin_user') || '{}')
+  } catch (e) {
+    return {}
+  }
+})
 const roleText = computed(() => {
   const role = user.value?.role
   return role === 'ADMIN' ? '超级管理员' : role === 'OPERATOR' ? '运营客服' : role
