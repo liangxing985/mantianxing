@@ -38,8 +38,19 @@
         <el-form-item label="分类名称">
           <el-input v-model="form.name" placeholder="如：端游、手游、MOBA、FPS" />
         </el-form-item>
-        <el-form-item label="图标URL">
-          <el-input v-model="form.icon" placeholder="图标图片地址" />
+        <el-form-item label="分类图标">
+          <el-upload
+            :show-file-list="false"
+            :before-upload="beforeUpload"
+            :http-request="(opts:any)=>handleUpload(opts)"
+            accept="image/*"
+          >
+            <div v-if="form.icon" class="upload-preview">
+              <img :src="form.icon" style="width:64px;height:64px;object-fit:cover;border-radius:6px;" />
+            </div>
+            <el-button v-else size="small">点击上传图标</el-button>
+          </el-upload>
+          <div style="color:#909399;font-size:12px;margin-top:4px;">建议正方形图标，不超过5MB</div>
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sortOrder" :min="0" />
@@ -60,6 +71,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import request from '@/utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { uploadImage } from '@/api'
 
 const loading = ref(false)
 const rawList = ref<any[]>([])
@@ -90,6 +102,28 @@ async function loadData() {
     rawList.value = []
   } finally {
     loading.value = false
+  }
+}
+
+function beforeUpload(file: File) {
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('图片不能超过5MB')
+    return false
+  }
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error('只能上传图片')
+    return false
+  }
+  return true
+}
+
+async function handleUpload(opts: any) {
+  try {
+    const res: any = await uploadImage(opts.file)
+    form.icon = res.url || res.data?.url || ''
+    ElMessage.success('上传成功')
+  } catch (e) {
+    ElMessage.error('上传失败')
   }
 }
 
@@ -137,4 +171,5 @@ async function handleDelete(row: any) {
 .page-container { padding: 20px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .page-title { margin: 0; font-size: 18px; }
+.upload-preview { display: inline-block; cursor: pointer; }
 </style>
