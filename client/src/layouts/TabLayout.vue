@@ -17,6 +17,7 @@
           <router-link to="/membership" class="nav-item" active-class="active">会员中心</router-link>
           <router-link to="/chat" class="nav-item" active-class="active">我的聊天</router-link>
           <router-link to="/coupon" class="nav-item" active-class="active">优惠券</router-link>
+          <router-link to="/activity" class="nav-item" active-class="active">活动中心</router-link>
         </nav>
         <div class="header-right">
           <div v-if="userInfo" class="user-info" @click="$router.push('/profile')">

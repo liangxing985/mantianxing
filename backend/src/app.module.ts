@@ -25,6 +25,7 @@ import { InviteModule } from './modules/invite/invite.module';
 import { TagModule } from './modules/tag/tag.module';
 import { GameCategoryModule } from './modules/game-category/game-category.module';
 import { CouponModule } from './modules/coupon/coupon.module';
+import { BannerModule } from './modules/banner/banner.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { CouponModule } from './modules/coupon/coupon.module';
     TagModule,
     GameCategoryModule,
     CouponModule,
+    BannerModule,
   ],
 })
 export class AppModule {}

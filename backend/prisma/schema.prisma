@@ -510,6 +510,22 @@ model Activity {
   @@map("activities")
 }
 
+// ==================== 轮播图Banner ====================
+
+model Banner {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(100) // 标题
+  image       String   @db.MediumText // 图片URL
+  linkUrl     String?  @db.VarChar(500) // 跳转链接（可选）
+  sortOrder   Int      @default(0) // 排序
+  isActive    Boolean  @default(true) // 是否启用
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("banners")
+}
+
 // ==================== 即时通讯IM ====================
 
 // 会话表（一对一聊天）

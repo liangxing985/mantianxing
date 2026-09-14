@@ -131,6 +131,12 @@ const routes = [
         component: () => import('@/views/CouponManage.vue'),
         meta: { title: '优惠券管理', icon: 'Ticket' },
       },
+      {
+        path: 'banner-manage',
+        name: 'BannerManage',
+        component: () => import('@/views/BannerManage.vue'),
+        meta: { title: '轮播图管理', icon: 'Picture' },
+      },
     ],
   },
 ]
