@@ -231,11 +231,16 @@ const createOrder = async () => {
   creating.value = true
   try {
     const res: any = await createRecharge(selectedAmount.value)
+    console.log('=== 创建充值订单返回 ===', res)
+    if (!res || !res.orderId) {
+      alert('创建订单失败：未返回订单ID')
+      return
+    }
     paymentInfo.value = res
     payStatus.value = 'pending_pay'
     startPolling(res.orderId)
   } catch (e: any) {
-    alert(e?.response?.data?.message || '创建订单失败')
+    alert(e?.response?.data?.message || e?.message || '创建订单失败')
   } finally {
     creating.value = false
   }
