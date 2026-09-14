@@ -9,6 +9,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class GiftController {
   constructor(private readonly giftService: GiftService) {}
 
+  @Get()
+  async getAllGifts() {
+    return this.giftService.getGifts();
+  }
+
   @Get('list')
   async getGifts() {
     return this.giftService.getGifts();

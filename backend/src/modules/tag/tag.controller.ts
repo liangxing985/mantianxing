@@ -9,6 +9,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 export class TagController {
   constructor(private readonly tagService: TagService) {}
 
+  @Get()
+  async getAllTags(@Query('category') category?: string) {
+    return this.tagService.getTags(category);
+  }
+
   @Get('list')
   async getTags(@Query('category') category?: string) {
     return this.tagService.getTags(category);
