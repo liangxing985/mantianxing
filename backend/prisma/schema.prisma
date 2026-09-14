@@ -60,6 +60,7 @@ model User {
   commissions   CommissionRecord[]
   skillTags     UserSkillTag[]
   depositRecords DepositRecord[]
+  userCoupons   UserCoupon[]
   dispatchRecordsAsOperator DispatchRecord[] @relation("DispatchOperator")
   dispatchRecordsAsFrom DispatchRecord[]     @relation("DispatchFrom")
   dispatchRecordsAsTo DispatchRecord[]       @relation("DispatchTo")
@@ -139,9 +140,11 @@ model Game {
   id          Int      @id @default(autoincrement())
   name        String   @unique @db.VarChar(50) // 游戏名称：王者荣耀、和平精英、三角洲行动等
   icon        String?  @db.VarChar(255) // 游戏图标
-  category    String?  @db.VarChar(50) // 游戏分类
+  categoryId  Int?     // 游戏分类ID
+  category    GameCategory? @relation(fields: [categoryId], references: [id])
+  servers     String?  @db.Text // 区服配置JSON：["QQ","微信","微信IOS","微信安卓"]
   sortOrder   Int      @default(0) // 排序
-  isEnabled   Boolean  @default(true)
+  isEnabled   Boolean  @default(true) // 独立开关
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -149,8 +152,76 @@ model Game {
   providerGames ProviderGame[]
   gamePricings GamePricing[]
   products Product[]
+  ranks GameRank[]
 
   @@map("games")
+}
+
+// 游戏分类表（标准化分类）
+model GameCategory {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // 分类名称：端游、手游、MOBA、FPS、战术撤离、派对休闲等
+  icon        String?  @db.VarChar(255) // 分类图标
+  sortOrder   Int      @default(0) // 排序
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  games Game[]
+
+  @@map("game_categories")
+}
+
+// 游戏段位配置表
+model GameRank {
+  id          Int      @id @default(autoincrement())
+  gameId      Int
+  game        Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(50) // 段位名称：青铜、白银、黄金、...、王者
+  level       Int      @default(1) // 段位等级（用于排序和按段位定价）
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([gameId, name])
+  @@index([gameId])
+  @@map("game_ranks")
+}
+
+// 优惠券表
+model Coupon {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100) // 优惠券名称
+  type        String   @db.VarChar(20) // 类型：FIXED满减 / DISCOUNT折扣 / NEWBIE新人
+  discountValue Int    // 优惠值：FIXED为减多少星石，DISCOUNT为折扣(如80表示8折)
+  minAmount   Int      @default(0) // 最低使用金额（星石）
+  totalCount  Int      @default(0) // 发放总量，0表示不限
+  usedCount   Int      @default(0) // 已使用数量
+  perUserLimit Int     @default(1) // 每人限领数量
+  startTime   DateTime? // 生效时间
+  endTime     DateTime? // 过期时间
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userCoupons UserCoupon[]
+
+  @@map("coupons")
+}
+
+// 用户优惠券表
+model UserCoupon {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  couponId    Int
+  coupon      Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  status      String   @default("UNUSED") @db.VarChar(20) // UNUSED未使用 / USED已使用 / EXPIRED已过期
+  orderId     Int?     // 使用的订单ID
+  usedAt      DateTime? // 使用时间
+  expireAt    DateTime? // 过期时间
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([couponId])
+  @@map("user_coupons")
 }
 
 // 服务项目表

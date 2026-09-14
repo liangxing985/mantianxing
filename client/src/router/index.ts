@@ -22,6 +22,7 @@ const routes = [
       { path: 'rank', component: () => import('@/views/Rank.vue'), meta: { title: '排行榜' } },
       { path: 'membership', component: () => import('@/views/Membership.vue'), meta: { title: '会员中心' } },
       { path: 'invite', component: () => import('@/views/Invite.vue'), meta: { title: '邀请好友', requiresAuth: true } },
+      { path: 'coupon', component: () => import('@/views/Coupon.vue'), meta: { title: '优惠券', requiresAuth: true } },
     ],
   },
 ]

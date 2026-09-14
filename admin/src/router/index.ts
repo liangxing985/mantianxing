@@ -72,6 +72,12 @@ const routes = [
         meta: { title: '游戏管理', icon: 'Game' },
       },
       {
+        path: 'game-categories',
+        name: 'GameCategories',
+        component: () => import('@/views/GameCategoryManage.vue'),
+        meta: { title: '游戏分类', icon: 'Menu' },
+      },
+      {
         path: 'game-approvals',
         name: 'GameApprovals',
         component: () => import('@/views/GameApproval.vue'),
@@ -118,6 +124,12 @@ const routes = [
         name: 'TagManage',
         component: () => import('@/views/TagManage.vue'),
         meta: { title: '标签管理', icon: 'CollectionTag' },
+      },
+      {
+        path: 'coupon-manage',
+        name: 'CouponManage',
+        component: () => import('@/views/CouponManage.vue'),
+        meta: { title: '优惠券管理', icon: 'Ticket' },
       },
     ],
   },

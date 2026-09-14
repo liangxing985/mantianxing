@@ -39,6 +39,7 @@
           <el-menu-item index="/products">商品管理</el-menu-item>
           <el-menu-item index="/activities">活动管理</el-menu-item>
           <el-menu-item index="/games">游戏管理</el-menu-item>
+          <el-menu-item index="/game-categories">游戏分类</el-menu-item>
           <el-menu-item index="/game-approvals">游戏审核</el-menu-item>
           <el-menu-item index="/pricing">定价管理</el-menu-item>
         </el-sub-menu>
@@ -67,6 +68,7 @@
           <el-menu-item index="/membership-manage">会员管理</el-menu-item>
           <el-menu-item index="/gift-manage">礼物管理</el-menu-item>
           <el-menu-item index="/tag-manage">标签管理</el-menu-item>
+          <el-menu-item index="/coupon-manage">优惠券管理</el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="/settings">

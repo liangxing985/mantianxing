@@ -9,9 +9,11 @@
       <el-collapse-item v-for="game in games" :key="game.id" :name="game.id">
         <template #title>
           <div class="game-title">
+            <el-image v-if="game.icon" :src="game.icon" style="width:24px;height:24px;border-radius:4px;" fit="cover" />
             <span>{{ game.name }}</span>
-            <el-tag v-if="game.category" size="small" type="info">{{ game.category }}</el-tag>
+            <el-tag v-if="game.category?.name" size="small" type="info">{{ game.category.name }}</el-tag>
             <el-tag size="small">{{ game.serviceItems?.length || 0 }} 个服务</el-tag>
+            <el-tag :type="game.isEnabled ? 'success' : 'info'" size="small">{{ game.isEnabled ? '启用' : '禁用' }}</el-tag>
             <el-button size="small" @click.stop="openGameDialog(game)">编辑</el-button>
             <el-button size="small" type="danger" @click.stop="deleteGame(game)">删除</el-button>
           </div>
@@ -42,21 +44,28 @@
     </el-collapse>
 
     <!-- 游戏编辑弹窗 -->
-    <el-dialog v-model="gameDialog" :title="gameForm.id ? '编辑游戏' : '新增游戏'" width="400px">
+    <el-dialog v-model="gameDialog" :title="gameForm.id ? '编辑游戏' : '新增游戏'" width="500px">
       <el-form :model="gameForm" label-width="80px">
         <el-form-item label="游戏名称" required>
           <el-input v-model="gameForm.name" />
         </el-form-item>
+        <el-form-item label="游戏图标">
+          <el-input v-model="gameForm.icon" placeholder="图标图片URL" />
+        </el-form-item>
         <el-form-item label="游戏分类">
-          <el-select v-model="gameForm.category" placeholder="选择分类" clearable style="width:100%;">
-            <el-option v-for="cat in categoryOptions" :key="cat" :label="cat" :value="cat" />
+          <el-select v-model="gameForm.categoryId" placeholder="选择标准化分类" clearable style="width:100%;">
+            <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="区服配置">
+          <el-input v-model="gameForm.servers" type="textarea" :rows="2" placeholder="多个区服用逗号分隔，如：QQ,微信,微信IOS,微信安卓" />
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="gameForm.sortOrder" :min="0" />
         </el-form-item>
-        <el-form-item label="状态">
+        <el-form-item label="独立开关">
           <el-switch v-model="gameForm.isEnabled" />
+          <span style="margin-left:8px;color:#999;font-size:12px;">关闭后该游戏不在前台显示</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -101,9 +110,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getGameList, createGame, updateGame, deleteGame as apiDeleteGame, createServiceItem, updateServiceItem, deleteServiceItem as apiDeleteServiceItem, getSystemConfig } from '@/api'
+import { getGameList, createGame, updateGame, deleteGame as apiDeleteGame, createServiceItem, updateServiceItem, deleteServiceItem as apiDeleteServiceItem } from '@/api'
+import request from '@/utils/request'
 
 const games = ref<any[]>([])
+const categories = ref<any[]>([])
 const activeGames = ref<number[]>([])
 const gameDialog = ref(false)
 const serviceDialog = ref(false)
@@ -112,32 +123,19 @@ const unitOptions = ref<{label: string, value: string}[]>([
   { label: '按局', value: 'game' },
   { label: '包段', value: 'package' },
 ])
-const categoryOptions = ref<string[]>([])
 
-const gameForm = reactive({ id: null as number | null, name: '', category: '', sortOrder: 0, isEnabled: true })
+const gameForm = reactive({ id: null as number | null, name: '', icon: '', categoryId: null as number | null, servers: '', sortOrder: 0, isEnabled: true })
 const serviceForm = reactive({ id: null as number | null, gameId: 0, name: '', defaultPrice: 30, unit: 'hour', description: '', sortOrder: 0, isEnabled: true })
 
 const unitLabel = (val: string) => unitOptions.value.find(u => u.value === val)?.label || val
 
 const loadData = async () => {
-  games.value = await getGameList() as any
+  const gameRes: any = await request.get('/games/list')
+  games.value = gameRes || []
   if (games.value.length > 0) activeGames.value = [games.value[0].id]
-  // 加载系统配置中的计价单位和分类
   try {
-    const res: any = await getSystemConfig()
-    const data = res.data || res
-    if (data.unit_options) {
-      try {
-        const arr = JSON.parse(data.unit_options)
-        if (Array.isArray(arr) && arr.length > 0) unitOptions.value = arr
-      } catch {}
-    }
-    if (data.game_categories) {
-      try {
-        const arr = JSON.parse(data.game_categories)
-        if (Array.isArray(arr) && arr.length > 0) categoryOptions.value = arr
-      } catch {}
-    }
+    const catRes: any = await request.get('/game-categories/admin/list')
+    categories.value = catRes || []
   } catch (e) {}
 }
 
@@ -145,13 +143,17 @@ const openGameDialog = (game?: any) => {
   if (game) {
     gameForm.id = game.id
     gameForm.name = game.name
-    gameForm.category = game.category || ''
+    gameForm.icon = game.icon || ''
+    gameForm.categoryId = game.categoryId || null
+    gameForm.servers = game.servers || ''
     gameForm.sortOrder = game.sortOrder
     gameForm.isEnabled = game.isEnabled
   } else {
     gameForm.id = null
     gameForm.name = ''
-    gameForm.category = ''
+    gameForm.icon = ''
+    gameForm.categoryId = null
+    gameForm.servers = ''
     gameForm.sortOrder = 0
     gameForm.isEnabled = true
   }
@@ -160,10 +162,11 @@ const openGameDialog = (game?: any) => {
 
 const saveGame = async () => {
   if (!gameForm.name) { ElMessage.warning('请输入游戏名称'); return }
+  const data = { ...gameForm }
   if (gameForm.id) {
-    await updateGame(gameForm.id, gameForm)
+    await updateGame(gameForm.id, data)
   } else {
-    await createGame(gameForm)
+    await createGame(data)
   }
   ElMessage.success('保存成功')
   gameDialog.value = false
@@ -226,5 +229,15 @@ onMounted(loadData)
   display: flex;
   align-items: center;
   gap: 12px;
+}
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
 }
 </style>

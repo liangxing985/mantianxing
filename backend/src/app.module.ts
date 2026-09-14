@@ -23,6 +23,8 @@ import { DepositModule } from './modules/deposit/deposit.module';
 import { GiftModule } from './modules/gift/gift.module';
 import { InviteModule } from './modules/invite/invite.module';
 import { TagModule } from './modules/tag/tag.module';
+import { GameCategoryModule } from './modules/game-category/game-category.module';
+import { CouponModule } from './modules/coupon/coupon.module';
 
 @Module({
   imports: [
@@ -53,6 +55,8 @@ import { TagModule } from './modules/tag/tag.module';
     GiftModule,
     InviteModule,
     TagModule,
+    GameCategoryModule,
+    CouponModule,
   ],
 })
 export class AppModule {}
