@@ -76,7 +76,8 @@ async function loadData() {
   loading.value = true
   try {
     const res: any = await request.get('/game-categories/admin/list')
-    list.value = Array.isArray(res) ? res : []
+    const arr = Array.isArray(res) ? res : (Array.isArray(res?.list) ? res.list : [])
+    list.value = arr.filter((item: any) => item && typeof item === 'object')
   } catch (e) {
     list.value = []
   } finally {
