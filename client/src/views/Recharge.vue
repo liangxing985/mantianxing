@@ -220,7 +220,8 @@ const loadRecords = async () => {
   loading.value = true
   try {
     const res: any = await getRechargeList({ page: 1, pageSize: 10 })
-    records.value = res.list || []
+    const recordsData = res?.data || res
+    records.value = recordsData.list || []
   } finally {
     loading.value = false
   }
@@ -232,13 +233,15 @@ const createOrder = async () => {
   try {
     const res: any = await createRecharge(selectedAmount.value)
     console.log('=== 创建充值订单返回 ===', res)
-    if (!res || !res.orderId) {
+    // 兼容两种响应结构：res.data.orderId 或 res.orderId
+    const orderData = res?.data || res
+    if (!orderData || !orderData.orderId) {
       alert('创建订单失败：未返回订单ID')
       return
     }
-    paymentInfo.value = res
+    paymentInfo.value = orderData
     payStatus.value = 'pending_pay'
-    startPolling(res.orderId)
+    startPolling(orderData.orderId)
   } catch (e: any) {
     alert(e?.response?.data?.message || e?.message || '创建订单失败')
   } finally {
@@ -251,12 +254,13 @@ const startPolling = (orderId: number) => {
   pollTimer = setInterval(async () => {
     try {
       const res: any = await queryPaymentStatus(orderId)
-      payStatus.value = res.payStatus
-      if (res.payStatus === 'paid') {
+      const statusData = res?.data || res
+      payStatus.value = statusData.payStatus
+      if (statusData.payStatus === 'paid') {
         stopPolling()
         await loadWallet()
         await loadRecords()
-      } else if (res.payStatus === 'expired') {
+      } else if (statusData.payStatus === 'expired') {
         stopPolling()
       }
     } catch (e) {}
