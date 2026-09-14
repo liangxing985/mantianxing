@@ -212,6 +212,9 @@ export class PaymentService {
    * 查询支付状态（前端轮询用）
    */
   async queryStatus(orderId: number) {
+    if (!orderId || isNaN(orderId)) {
+      return { payStatus: 'pending_pay', paidAt: null };
+    }
     const order = await this.prisma.paymentOrder.findUnique({ where: { id: orderId } });
     if (!order) throw new Error('订单不存在');
 
