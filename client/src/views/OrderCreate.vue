@@ -188,16 +188,64 @@
             <span>陪玩人数</span>
             <span>双陪（2人）</span>
           </div>
+          <!-- 优惠券选择（双陪订单暂不支持） -->
+          <div v-if="!(fromProvider && playMode === 'double')" class="summary-row coupon-row" @click="showCouponPicker = true">
+            <span>优惠券</span>
+            <span class="coupon-select">
+              <span v-if="selectedCoupon" class="coupon-selected">-{{ discountAmount }}星石</span>
+              <span v-else-if="myCoupons.length > 0" class="coupon-available">{{ myCoupons.length }}张可用</span>
+              <span v-else class="coupon-none">暂无可用</span>
+              <span class="arrow">›</span>
+            </span>
+          </div>
+          <div v-if="discountAmount > 0" class="summary-row discount-row">
+            <span>优惠</span>
+            <span class="discount-amount">-{{ discountAmount }} 星石</span>
+          </div>
           <div class="summary-divider"></div>
           <div class="summary-total">
             <span>应付金额</span>
-            <span class="total-amount">{{ totalAmount }} 星石</span>
+            <span class="total-amount">{{ payAmount }} 星石</span>
           </div>
           <button class="submit-btn" @click="handleSubmit" :disabled="loading">
             <span v-if="loading">提交中...</span>
-            <span v-else>确认下单（{{ totalAmount }}星石）</span>
+            <span v-else>确认下单（{{ payAmount }}星石）</span>
           </button>
           <p class="submit-tip">下单后星石将被冻结，服务完成审核通过后结算给陪玩</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 优惠券选择弹窗 -->
+    <div v-if="showCouponPicker" class="modal-overlay" @click.self="showCouponPicker = false">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>选择优惠券</h3>
+          <button class="modal-close" @click="showCouponPicker = false">×</button>
+        </div>
+        <div class="modal-body">
+          <div
+            v-for="c in myCoupons"
+            :key="c.id"
+            class="coupon-item"
+            :class="{ selected: selectedCouponId === c.id, disabled: c.coupon.minAmount > totalAmount }"
+            @click="selectCoupon(c)"
+          >
+            <div class="coupon-left">
+              <div class="coupon-value">
+                {{ c.coupon.type === 'FIXED' ? '减' + c.coupon.discountValue : c.coupon.discountValue + '折' }}
+              </div>
+              <div class="coupon-unit">星石</div>
+            </div>
+            <div class="coupon-right">
+              <div class="coupon-name">{{ c.coupon.name }}</div>
+              <div class="coupon-condition">满{{ c.coupon.minAmount }}星石可用</div>
+              <div class="coupon-expire">{{ c.expireAt ? new Date(c.expireAt).toLocaleDateString() : '长期有效' }}</div>
+            </div>
+            <span v-if="selectedCouponId === c.id" class="check-icon">✓</span>
+          </div>
+          <div v-if="myCoupons.length === 0" class="empty-text">暂无可用优惠券</div>
+          <button v-if="selectedCouponId" class="btn-clear" @click="selectedCouponId = null; showCouponPicker = false">不使用优惠券</button>
         </div>
       </div>
     </div>
@@ -269,6 +317,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import request from '@/utils/request'
 import { getProviderList, createOrder, getWallet, getGameList, getProviderDetail } from '@/api'
 
 const route = useRoute()
@@ -312,6 +361,49 @@ const form = reactive({
   contactValue: '',
   requirement: '',
 })
+
+// 优惠券
+const myCoupons = ref<any[]>([])
+const selectedCouponId = ref<number | null>(null)
+const showCouponPicker = ref(false)
+const selectedCoupon = computed(() => myCoupons.value.find(c => c.id === selectedCouponId.value))
+
+// 加载可用优惠券
+const loadCoupons = async () => {
+  try {
+    const res: any = await request.get('/coupons/my', { params: { status: 'UNUSED' } })
+    myCoupons.value = res || res.data || []
+  } catch (e) {
+    myCoupons.value = []
+  }
+}
+
+// 计算优惠金额
+const discountAmount = computed(() => {
+  if (!selectedCoupon.value) return 0
+  const coupon = selectedCoupon.value.coupon
+  const amount = totalAmount.value
+  if (amount < coupon.minAmount) return 0
+  if (coupon.type === 'FIXED') {
+    return Math.min(coupon.discountValue, amount)
+  } else if (coupon.type === 'DISCOUNT') {
+    return Math.floor(amount * (1 - coupon.discountValue / 100))
+  }
+  return 0
+})
+
+// 实际支付金额
+const payAmount = computed(() => Math.max(0, totalAmount.value - discountAmount.value))
+
+// 选择优惠券
+const selectCoupon = (coupon: any) => {
+  if (coupon.coupon.minAmount > totalAmount.value) {
+    alert(`未达到最低使用金额${coupon.coupon.minAmount}星石`)
+    return
+  }
+  selectedCouponId.value = coupon.id
+  showCouponPicker.value = false
+}
 
 // 总价计算
 const totalAmount = computed(() => {
@@ -399,8 +491,8 @@ const handleSubmit = async () => {
   if (!fromProvider && !form.serviceItemId) { alert('服务项目加载中，请稍后'); return }
 
   const wallet: any = await getWallet()
-  if (wallet.balance < totalAmount.value) {
-    alert(`当前余额 ${wallet.balance} 星石，需要 ${totalAmount.value} 星石，请联系客服充值`)
+  if (wallet.balance < payAmount.value) {
+    alert(`当前余额 ${wallet.balance} 星石，需要 ${payAmount.value} 星石，请联系客服充值`)
     return
   }
 
@@ -414,6 +506,7 @@ const handleSubmit = async () => {
           title: `${gameName}陪玩`,
           overridePrice: providerPrice,
           productName: gameName,
+          couponId: selectedCouponId.value || undefined,
         })
         alert('下单成功')
         router.replace(`/order/${res.id}`)
@@ -445,6 +538,7 @@ const handleSubmit = async () => {
           title: productName || '陪玩订单',
           overridePrice: productPrice || undefined,
           productName,
+          couponId: selectedCouponId.value || undefined,
         })
         alert('下单成功，等待陪玩接单')
         router.replace(`/order/${res.id}`)
@@ -472,7 +566,10 @@ const handleSubmit = async () => {
   }
 }
 
-onMounted(loadData)
+onMounted(() => {
+  loadData()
+  loadCoupons()
+})
 </script>
 
 <style scoped>
@@ -777,6 +874,96 @@ onMounted(loadData)
   font-size: 12px;
   color: #999;
   margin: 12px 0 0;
+}
+
+/* 优惠券 */
+.coupon-row {
+  cursor: pointer;
+}
+.coupon-select {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.coupon-selected {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+.coupon-available {
+  color: #6c5ce7;
+}
+.coupon-none {
+  color: #999;
+}
+.arrow {
+  color: #ccc;
+  font-size: 18px;
+}
+.discount-row .discount-amount {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+.coupon-item {
+  display: flex;
+  align-items: center;
+  padding: 14px;
+  border: 2px solid #eee;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+.coupon-item.selected {
+  border-color: #6c5ce7;
+  background: rgba(108,92,231,0.05);
+}
+.coupon-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.coupon-left {
+  width: 80px;
+  text-align: center;
+  border-right: 2px dashed #eee;
+  padding-right: 14px;
+}
+.coupon-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ff6b6b;
+}
+.coupon-unit {
+  font-size: 12px;
+  color: #999;
+}
+.coupon-right {
+  flex: 1;
+  padding-left: 14px;
+}
+.coupon-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.coupon-condition {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 2px;
+}
+.coupon-expire {
+  font-size: 11px;
+  color: #999;
+}
+.btn-clear {
+  width: 100%;
+  padding: 10px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  color: #666;
+  cursor: pointer;
+  margin-top: 10px;
 }
 
 /* 弹窗 */

@@ -278,7 +278,10 @@ model Order {
   requirement     String?  @db.Text // 老板要求
   duration        Int      @default(1) // 数量（小时/局数）
   unitPrice       Int      // 单价（星石）
-  totalAmount     Int      // 总金额（星石）
+  totalAmount     Int      // 总金额（星石，优惠后实际支付）
+  originalAmount  Int      @default(0) // 原价（优惠前）
+  discountAmount  Int      @default(0) // 优惠金额
+  couponId        Int?     // 使用的优惠券ID
   platformFee     Int      @default(0) // 平台抽成（星石）
   providerIncome  Int      @default(0) // 陪玩实际收入（星石）
   status          OrderStatus @default(CREATED) // 订单状态
@@ -842,6 +845,7 @@ enum TxnType {
   CONSUME   // 消费（下单）
   INCOME    // 收入（订单结算）
   WITHDRAW  // 提现
+  WITHDRAW_CONFIRM // 提现确认打款
   REFUND    // 退款
   REWARD    // 奖励
   PUNISH    // 惩罚

@@ -329,8 +329,8 @@ export class KookService implements OnModuleDestroy {
         return;
       }
 
-      if (!user.providerProfile.acceptOrder || !user.providerProfile.isOnline) {
-        await this.sendPrivateMessage(kookUserId, '❌ 请先在陪玩端开启「在线接单」状态');
+      if (!user.providerProfile.acceptOrder) {
+        await this.sendPrivateMessage(kookUserId, '❌ 请先在陪玩端开启「接单」状态');
         return;
       }
 
@@ -352,6 +352,17 @@ export class KookService implements OnModuleDestroy {
           return;
         }
 
+        // 检查陪玩是否开通该游戏权限
+        if (order.gameId) {
+          const providerGame = await this.prisma.providerGame.findFirst({
+            where: { providerId: user.providerProfile.id, gameId: order.gameId, status: 'APPROVED' },
+          });
+          if (!providerGame) {
+            await this.sendPrivateMessage(kookUserId, '❌ 您未开通该游戏或游戏待审核中');
+            return;
+          }
+        }
+
         await this.prisma.order.update({
           where: { id: orderId },
           data: {
@@ -361,7 +372,14 @@ export class KookService implements OnModuleDestroy {
           },
         });
 
-        await this.updateOrderCard(order, user.nickname);
+        // 重新查询完整订单用于卡片更新
+        const fullOrder = await this.prisma.order.findUnique({
+          where: { id: orderId },
+          include: { serviceItem: { include: { game: true } } },
+        });
+        if (fullOrder) {
+          await this.updateOrderCard(fullOrder, user.nickname);
+        }
 
         await this.sendPrivateMessage(
           kookUserId,

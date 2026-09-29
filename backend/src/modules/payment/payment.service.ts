@@ -314,7 +314,7 @@ export class PaymentService {
   }
 
   /**
-   * 处理支付成功：增加用户余额，记录流水
+   * 处理支付成功：增加用户余额，记录流水（事务操作保证一致性）
    */
   private async processPaymentSuccess(orderId: number) {
     const order = await this.prisma.paymentOrder.findUnique({ where: { id: orderId } });
@@ -333,23 +333,27 @@ export class PaymentService {
       return;
     }
 
-    // 增加余额
-    const wallet = await this.prisma.wallet.update({
-      where: { userId: order.userId },
-      data: { balance: { increment: order.coinAmount } },
-    });
+    // 事务：增加余额 + 记录流水
+    await this.prisma.$transaction(async (tx) => {
+      const wallet = await tx.wallet.update({
+        where: { userId: order.userId },
+        data: {
+          balance: { increment: order.coinAmount },
+          totalRecharge: { increment: order.coinAmount },
+        },
+      });
 
-    // 记录流水
-    await this.prisma.walletTransaction.create({
-      data: {
-        walletId: wallet.id,
-        userId: order.userId,
-        type: 'RECHARGE',
-        amount: order.coinAmount,
-        balanceAfter: wallet.balance,
-        orderId: order.id,
-        remark: `星石充值${order.amount}元`,
-      },
+      await tx.walletTransaction.create({
+        data: {
+          walletId: wallet.id,
+          userId: order.userId,
+          type: 'RECHARGE',
+          amount: order.coinAmount,
+          balanceAfter: wallet.balance,
+          orderId: order.id,
+          remark: `星石充值${order.amount}元`,
+        },
+      });
     });
 
     this.logger.log(`用户 ${order.userId} 充值到账 ${order.coinAmount} 星石`);

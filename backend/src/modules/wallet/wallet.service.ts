@@ -80,8 +80,8 @@ export class WalletService {
       throw new BadRequestException('余额不足');
     }
 
-    // 手续费按配置比例，最低1星石
-    const fee = Math.max(1, Math.floor(amount * withdrawFeeRate / 100));
+    // 手续费按配置比例计算（向下取整）
+    const fee = Math.floor(amount * withdrawFeeRate / 100);
     const realAmount = amount - fee;
 
     await this.prisma.$transaction(async (tx) => {

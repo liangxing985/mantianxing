@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { PrismaService } from '../../database/prisma.service';
 import { getPagination } from '../../common/utils';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { InviteService } from '../invite/invite.service';
 
 @Injectable()
 export class AdminService {
@@ -10,6 +11,7 @@ export class AdminService {
   constructor(
     private prisma: PrismaService,
     private configService: SystemConfigService,
+    private inviteService: InviteService,
   ) {}
 
   // 根据接单量计算等级
@@ -233,6 +235,9 @@ export class AdminService {
     if (order.status !== 'REVIEWING') {
       throw new BadRequestException('订单状态不正确');
     }
+    if (!order.providerId) {
+      throw new BadRequestException('订单未指派陪玩，无法结算');
+    }
 
     // 平台抽成从系统配置读取
     const feeRate = await this.configService.getNumber('platform_fee_rate') || 20;
@@ -257,9 +262,9 @@ export class AdminService {
 
       // 解冻老板冻结金额（已在下单时扣除，这里直接结算给陪玩）
       // 陪玩钱包增加收入
-      const providerWallet = await tx.wallet.findUnique({ where: { userId: order.providerId! } });
+      const providerWallet = await tx.wallet.findUnique({ where: { userId: order.providerId } });
       await tx.wallet.update({
-        where: { userId: order.providerId! },
+        where: { userId: order.providerId },
         data: {
           balance: { increment: providerIncome },
           totalIncome: { increment: providerIncome },
@@ -270,7 +275,7 @@ export class AdminService {
       await tx.walletTransaction.create({
         data: {
           walletId: providerWallet.id,
-          userId: order.providerId!,
+          userId: order.providerId,
           type: 'INCOME',
           amount: providerIncome,
           balanceAfter: providerWallet.balance + providerIncome,
@@ -279,8 +284,8 @@ export class AdminService {
         },
       });
 
-      // 平台抽成入账到超级管理员钱包
-      const adminUser = await tx.user.findUnique({ where: { username: 'admin' } });
+      // 平台抽成入账到管理员钱包（查找ADMIN角色用户，避免硬编码username）
+      const adminUser = await tx.user.findFirst({ where: { role: 'ADMIN' } });
       if (adminUser && platformFee > 0) {
         const adminWallet = await tx.wallet.findUnique({ where: { userId: adminUser.id } });
         if (adminWallet) {
@@ -307,14 +312,14 @@ export class AdminService {
 
       // 更新陪玩订单数和等级（根据接单量自动升级）
       const updatedProfile = await tx.providerProfile.update({
-        where: { userId: order.providerId! },
+        where: { userId: order.providerId },
         data: { orderCount: { increment: 1 } },
       });
       // 根据接单量计算等级
       const newLevel = this.calculateLevel(updatedProfile.orderCount);
       if (newLevel !== updatedProfile.level) {
         await tx.providerProfile.update({
-          where: { userId: order.providerId! },
+          where: { userId: order.providerId },
           data: { level: newLevel },
         });
       }
@@ -336,6 +341,11 @@ export class AdminService {
         data: { frozen: { decrement: order.totalAmount } },
       });
     });
+
+    // 发放邀请佣金（异步，不影响主流程）
+    this.inviteService.awardCommission(order.customerId, order.id, order.totalAmount).catch(e =>
+      this.logger.error('发放邀请佣金失败', e),
+    );
 
     this.logger.log(`订单${order.orderNo}审核通过，陪玩收入${providerIncome}星石`);
     return { success: true };
@@ -444,11 +454,24 @@ export class AdminService {
           },
         });
 
-        await tx.wallet.update({
+        const wallet = await tx.wallet.update({
           where: { userId: withdraw.userId },
           data: {
             frozen: { decrement: withdraw.amount },
             totalWithdraw: { increment: withdraw.amount },
+          },
+        });
+
+        // 提现确认流水
+        await tx.walletTransaction.create({
+          data: {
+            walletId: wallet.id,
+            userId: withdraw.userId,
+            type: 'WITHDRAW_CONFIRM',
+            amount: -withdraw.amount,
+            balanceAfter: wallet.balance,
+            orderId: withdrawId,
+            remark: `提现打款确认：${withdraw.amount}星石，实际到账${withdraw.realAmount.toFixed(2)}元`,
           },
         });
       } else {
@@ -658,8 +681,8 @@ export class AdminService {
       ? await this.prisma.order.findMany({ where: { orderGroup: order.orderGroup, status: 'PAID' } })
       : [order];
 
-    if (providerIds.length > groupOrders.length) {
-      throw new BadRequestException(`陪玩数量(${providerIds.length})超过订单数量(${groupOrders.length})`);
+    if (providerIds.length !== groupOrders.length) {
+      throw new BadRequestException(`双陪订单需要选择${groupOrders.length}名陪玩，当前选择${providerIds.length}名`);
     }
 
     const results = [];

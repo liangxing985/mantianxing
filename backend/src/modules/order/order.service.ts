@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, ForbiddenException,
 import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../config/redis.service';
 import { KookService } from '../kook/kook.service';
+import { CouponService } from '../coupon/coupon.service';
 import { generateOrderNo, getPagination } from '../../common/utils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,6 +14,7 @@ export class OrderService {
     private prisma: PrismaService,
     private redis: RedisService,
     private kookService: KookService,
+    private couponService: CouponService,
   ) {}
 
   // ==================== 老板端 ====================
@@ -31,6 +33,7 @@ export class OrderService {
     overridePrice?: number; // 商品下单时覆盖单价
     productName?: string; // 商品名称（备注用）
     orderGroup?: string; // 订单组ID，双陪/多人订单共享
+    couponId?: number; // 用户优惠券ID
   }) {
     // 获取服务项目信息（商品模式下serviceItemId可能为0，自动查找该游戏第一个启用的服务项目）
     let serviceItem = null;
@@ -92,16 +95,59 @@ export class OrderService {
       }
     }
 
-    const totalAmount = unitPrice * data.duration;
+    const originalAmount = unitPrice * data.duration;
+    let discountAmount = 0;
+    let userCouponId: number | null = null;
 
-    // 检查老板余额
-    const wallet = await this.prisma.wallet.findUnique({ where: { userId: customerId } });
-    if (!wallet || wallet.balance < totalAmount) {
-      throw new BadRequestException('星石余额不足，请先充值');
+    // 如果使用优惠券，先计算优惠金额（事务外验证，事务内核销）
+    if (data.couponId) {
+      const userCoupon = await this.prisma.userCoupon.findUnique({
+        where: { id: data.couponId },
+        include: { coupon: true },
+      });
+      if (!userCoupon || userCoupon.userId !== customerId) {
+        throw new BadRequestException('优惠券不存在');
+      }
+      if (userCoupon.status !== 'UNUSED') {
+        throw new BadRequestException('优惠券已使用');
+      }
+      if (userCoupon.expireAt && userCoupon.expireAt < new Date()) {
+        throw new BadRequestException('优惠券已过期');
+      }
+      discountAmount = this.couponService.calculateDiscount(userCoupon.coupon, originalAmount);
+      if (discountAmount <= 0) {
+        throw new BadRequestException('未达到优惠券最低使用金额');
+      }
+      userCouponId = data.couponId;
     }
 
-    // 创建订单（事务：扣余额+冻结+创建订单）
+    const totalAmount = Math.max(0, originalAmount - discountAmount);
+
+    // 创建订单（事务：扣余额+冻结+创建订单+核销优惠券，事务内检查余额防止竞态）
     const order = await this.prisma.$transaction(async (tx) => {
+      // 事务内重新查询钱包并检查余额（加行锁）
+      const wallet = await tx.wallet.findUnique({
+        where: { userId: customerId },
+      });
+      if (!wallet || wallet.balance < totalAmount) {
+        throw new BadRequestException('星石余额不足，请先充值');
+      }
+
+      // 核销优惠券
+      if (userCouponId) {
+        await tx.userCoupon.update({
+          where: { id: userCouponId },
+          data: { status: 'USED', usedAt: new Date() },
+        });
+        const uc = await tx.userCoupon.findUnique({ where: { id: userCouponId } });
+        if (uc) {
+          await tx.coupon.update({
+            where: { id: uc.couponId },
+            data: { usedCount: { increment: 1 } },
+          });
+        }
+      }
+
       // 扣减余额，冻结金额
       await tx.wallet.update({
         where: { userId: customerId },
@@ -137,6 +183,9 @@ export class OrderService {
           duration: data.duration,
           unitPrice,
           totalAmount,
+          originalAmount,
+          discountAmount,
+          couponId: userCouponId,
           status: 'PAID', // 所有订单都先进入待接单状态，陪玩确认后才变为已接单
           contactType: data.contactType,
           contactValue: data.contactValue,
@@ -158,7 +207,7 @@ export class OrderService {
     this.logger.log(`订单创建成功: ${order.orderNo}, 金额: ${order.totalAmount}星石`);
 
     // 如果进入抢单池（未指定陪玩），异步推送到 Kook 抢单频道
-    if (order.status === 'PAID') {
+    if (!order.providerId) {
       this.kookService.sendOrderCard(order).catch((e) =>
         this.logger.error('Kook 推送失败', e),
       );
@@ -191,6 +240,23 @@ export class OrderService {
           cancelReason: reason,
         },
       });
+
+      // 退还优惠券
+      if (order.couponId) {
+        const userCoupon = await tx.userCoupon.findFirst({
+          where: { id: order.couponId, userId: customerId, status: 'USED' },
+        });
+        if (userCoupon) {
+          await tx.userCoupon.update({
+            where: { id: userCoupon.id },
+            data: { status: 'UNUSED', orderId: null, usedAt: null },
+          });
+          await tx.coupon.update({
+            where: { id: userCoupon.couponId },
+            data: { usedCount: { decrement: 1 } },
+          });
+        }
+      }
 
       // 解冻金额，退回余额
       await tx.wallet.update({
@@ -469,6 +535,9 @@ export class OrderService {
     if (order.status !== 'COMPLETED') {
       throw new BadRequestException('订单未完成，无法评价');
     }
+    if (!order.providerId) {
+      throw new BadRequestException('订单无陪玩信息，无法评价');
+    }
     if (order.customerRating) {
       throw new BadRequestException('订单已评价');
     }
@@ -488,7 +557,7 @@ export class OrderService {
         data: {
           orderId,
           customerId,
-          providerId: order.providerId!,
+          providerId: order.providerId,
           rating: data.rating,
           content: data.content,
           tags: data.tags,
@@ -497,12 +566,12 @@ export class OrderService {
       });
 
       // 更新陪玩评分
-      const profile = await tx.providerProfile.findUnique({ where: { userId: order.providerId! } });
+      const profile = await tx.providerProfile.findUnique({ where: { userId: order.providerId } });
       if (profile) {
         const newRatingCount = profile.ratingCount + 1;
         const newRating = (profile.rating * profile.ratingCount + data.rating) / newRatingCount;
         await tx.providerProfile.update({
-          where: { userId: order.providerId! },
+          where: { userId: order.providerId },
           data: {
             rating: Math.round(newRating * 10) / 10,
             ratingCount: newRatingCount,

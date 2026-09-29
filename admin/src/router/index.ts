@@ -78,6 +78,12 @@ const routes = [
         meta: { title: '游戏分类', icon: 'Menu' },
       },
       {
+        path: 'game-ranks',
+        name: 'GameRanks',
+        component: () => import('@/views/GameRankManage.vue'),
+        meta: { title: '段位管理', icon: 'Trophy' },
+      },
+      {
         path: 'game-approvals',
         name: 'GameApprovals',
         component: () => import('@/views/GameApproval.vue'),

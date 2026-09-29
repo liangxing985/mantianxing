@@ -41,6 +41,7 @@
           <el-menu-item index="/banner-manage">轮播图管理</el-menu-item>
           <el-menu-item index="/games">游戏管理</el-menu-item>
           <el-menu-item index="/game-categories">游戏分类</el-menu-item>
+          <el-menu-item index="/game-ranks">段位管理</el-menu-item>
           <el-menu-item index="/game-approvals">游戏审核</el-menu-item>
           <el-menu-item index="/pricing">定价管理</el-menu-item>
         </el-sub-menu>
