@@ -1,3 +1,8 @@
+/**
+ * 优惠券控制器
+ * 公开/用户端：可领取列表、我的优惠券、领取优惠券
+ * 管理端：优惠券CRUD（需ADMIN角色）
+ */
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { CouponService } from './coupon.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';

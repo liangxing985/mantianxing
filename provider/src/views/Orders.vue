@@ -61,6 +61,11 @@
   </div>
 </template>
 
+<!--
+  陪玩端我的订单页面
+  功能：订单列表、状态筛选（待接单/已接单/服务中/待审核/已完成）、订单详情入口
+  陪玩可在此查看自己的所有订单并进行相应操作
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

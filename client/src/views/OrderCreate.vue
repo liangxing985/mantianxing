@@ -314,6 +314,12 @@
   </div>
 </template>
 
+<!--
+  老板端下单页面（电脑端布局）
+  功能：左右分栏（左侧表单，右侧订单摘要）、单陪/双陪选择、陪玩选择、优惠券选择、
+        时长选择、备注填写、订单金额实时计算
+  支持指定陪玩直接派单，或不指定陪玩进入抢单池
+-->
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

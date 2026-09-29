@@ -1,3 +1,9 @@
+/**
+ * 管理后台服务模块
+ * 负责管理员操作：数据看板、订单审核（报单通过/驳回）、提现审核、
+ * 陪玩管理、用户管理、手动派单、平台收入统计、邀请佣金发放
+ * 平台抽成收入自动入账到ADMIN角色用户的钱包
+ */
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { getPagination } from '../../common/utils';
@@ -9,12 +15,15 @@ export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private configService: SystemConfigService,
-    private inviteService: InviteService,
+    private prisma: PrismaService,           // 数据库ORM
+    private configService: SystemConfigService, // 系统配置
+    private inviteService: InviteService,     // 邀请佣金服务
   ) {}
 
-  // 根据接单量计算等级
+  /**
+   * 根据陪玩接单量计算等级（1-10级）
+   * 用于陪玩等级展示和排行榜
+   */
   private calculateLevel(orderCount: number): number {
     if (orderCount >= 500) return 10;
     if (orderCount >= 300) return 9;
@@ -29,6 +38,7 @@ export class AdminService {
   }
 
   // ==================== 数据概览 ====================
+  /** 获取管理后台数据概览（订单数、用户数、收入等） */
   async getDashboard() {
     const [
       totalUsers,
@@ -229,6 +239,11 @@ export class AdminService {
   }
 
   // 审核报单（通过 -> 结算）
+  /**
+   * 审核通过报单
+   * 事务内：更新订单状态为COMPLETED → 计算平台抽成和陪玩收入 → 解冻老板金额
+   * → 陪玩收入入账 → 平台抽成入账ADMIN钱包 → 记录流水 → 异步发放邀请佣金
+   */
   async approveReport(adminId: number, orderId: number, comment?: string) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('订单不存在');
@@ -352,6 +367,7 @@ export class AdminService {
   }
 
   // 驳回报单（回到服务中）
+  /** 驳回报单（订单回到服务中状态，陪玩可重新提交） */
   async rejectReport(adminId: number, orderId: number, comment: string) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('订单不存在');
@@ -431,6 +447,11 @@ export class AdminService {
   }
 
   // 审核提现
+  /**
+   * 审核提现申请
+   * 通过：事务内扣除冻结金额 → 记录WITHDRAW_CONFIRM流水 → 更新提现状态
+   * 拒绝：解冻金额退回余额 → 更新提现状态
+   */
   async reviewWithdraw(adminId: number, withdrawId: number, data: {
     status: 'APPROVED' | 'REJECTED';
     comment?: string;
@@ -670,6 +691,11 @@ export class AdminService {
 
   // 客服手动指定陪玩接单
   // 手动派单（支持单陪/双陪）
+  /**
+   * 手动派单（客服指定陪玩）
+   * 支持双陪多选，要求陪玩数量等于订单组内订单数量
+   * 记录派单日志，更新订单状态为已接单
+   */
   async manualAssignOrder(operatorId: number, orderId: number, providerIds: number[]) {
     if (!providerIds || providerIds.length === 0) throw new BadRequestException('请选择陪玩');
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
@@ -728,6 +754,11 @@ export class AdminService {
   }
 
   // 自动派单（权重算法：在线状态40% + 评分30% + 接单量30%）
+  /**
+   * 自动派单
+   * 随机选择符合条件（已审核、接单中、开通该游戏）的陪玩进行派单
+   * 单陪随机选1个，双陪随机选2个
+   */
   async autoAssignOrder(operatorId: number, orderId: number) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -798,6 +829,11 @@ export class AdminService {
   }
 
   // 转派/换人
+  /**
+   * 转单/换人
+   * 将订单从当前陪玩转移给新陪玩，记录转单原因和日志
+   * 原陪玩收入清零，新陪玩承接订单
+   */
   async reassignOrder(operatorId: number, orderId: number, newProviderId: number, reason: string) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('订单不存在');

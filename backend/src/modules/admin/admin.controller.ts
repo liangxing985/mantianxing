@@ -1,3 +1,8 @@
+/**
+ * 管理后台控制器
+ * 仅ADMIN和OPERATOR角色可访问
+ * 提供：数据看板、用户管理、订单审核、提现审核、游戏管理、手动派单、转单等接口
+ */
 import { Controller, Get, Post, Put, Delete, Body, Query, Param, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

@@ -1,3 +1,9 @@
+/**
+ * 优惠券服务模块
+ * 支持三种类型：FIXED满减、DISCOUNT折扣、NEWBIE新人券
+ * 流程：领取 → 下单时选择抵扣 → 事务内核销 → 取消订单时退还
+ * 所有关键操作（领取、使用、退还）均使用事务保证并发安全
+ */
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 
@@ -5,7 +11,10 @@ import { PrismaService } from '../../database/prisma.service';
 export class CouponService {
   constructor(private prisma: PrismaService) {}
 
-  // 获取可领取的优惠券列表
+  /**
+   * 获取可领取的优惠券列表
+   * 过滤条件：启用中、在有效期内、未领满、用户未达到领取上限
+   */
   async getAvailableCoupons(userId: number) {
     const now = new Date();
     const coupons = await this.prisma.coupon.findMany({
@@ -54,6 +63,7 @@ export class CouponService {
   }
 
   // 获取我的优惠券
+  /** 获取我的优惠券列表（支持按状态筛选：UNUSED/USED/EXPIRED） */
   async getMyCoupons(userId: number, status?: string) {
     const where: any = { userId };
     if (status) where.status = status;
@@ -65,6 +75,11 @@ export class CouponService {
   }
 
   // 领取优惠券（事务防超领）
+  /**
+   * 领取优惠券（事务化）
+   * 校验：优惠券存在、启用、在有效期、未领满、用户未达领取上限
+   * 事务内：创建用户优惠券记录 → 增加已领取数量
+   */
   async claimCoupon(userId: number, couponId: number) {
     const coupon = await this.prisma.coupon.findUnique({ where: { id: couponId } });
     if (!coupon) throw new NotFoundException('优惠券不存在');
@@ -114,6 +129,11 @@ export class CouponService {
   }
 
   // 使用优惠券（下单时调用，事务防重复使用）
+  /**
+   * 使用优惠券（事务化，下单时调用）
+   * 校验：优惠券属于用户、状态为UNUSED、满足最低金额
+   * 事务内：更新用户优惠券状态为USED → 增加已使用数量 → 返回优惠金额
+   */
   async useCoupon(userId: number, userCouponId: number, orderId: number, orderAmount: number) {
     const result = await this.prisma.$transaction(async (tx) => {
       const userCoupon = await tx.userCoupon.findUnique({
@@ -149,6 +169,10 @@ export class CouponService {
   }
 
   // 退还优惠券（订单取消时）
+  /**
+   * 退还优惠券（订单取消时调用）
+   * 将用户优惠券状态改回UNUSED，减少已使用数量
+   */
   async refundCoupon(userCouponId: number) {
     const userCoupon = await this.prisma.userCoupon.findUnique({ where: { id: userCouponId } });
     if (!userCoupon || userCoupon.status !== 'USED') return;

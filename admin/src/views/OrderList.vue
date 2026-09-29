@@ -113,6 +113,11 @@
   </div>
 </template>
 
+<!--
+  订单管理页面
+  功能：订单列表、状态筛选、搜索、订单详情查看
+  支持按订单号、用户、状态、时间范围筛选
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { getOrderList } from '@/api'

@@ -101,6 +101,11 @@
   </div>
 </template>
 
+<!--
+  陪玩端抢单池页面
+  功能：展示待接单订单列表、按游戏筛选、点击抢单
+  抢单使用Redis分布式锁，防止并发抢单
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

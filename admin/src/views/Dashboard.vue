@@ -107,6 +107,11 @@
   </div>
 </template>
 
+<!--
+  管理后台首页 - 数据概览看板
+  展示：核心指标统计卡片（订单数/用户数/收入/待审核）、待处理事项列表、收入趋势图表
+  数据来源：/admin/dashboard 接口
+-->
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { getDashboard } from '@/api'

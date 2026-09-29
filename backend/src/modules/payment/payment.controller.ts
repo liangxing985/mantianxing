@@ -1,3 +1,9 @@
+/**
+ * 支付控制器（ShareFlow码支付）
+ * 用户端：创建充值订单、查询支付状态、充值记录
+ * 公开：支付回调接口（ShareFlow服务器主动通知）
+ * 管理端：充值统计、充值订单列表
+ */
 import { Controller, Post, Get, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PaymentService } from './payment.service';

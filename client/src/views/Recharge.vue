@@ -147,6 +147,11 @@
   </div>
 </template>
 
+<!--
+  老板端充值页面（ShareFlow码支付）
+  功能：预设金额选择+自定义金额、微信/支付宝二维码切换、3秒轮询支付状态、成功自动到账、充值记录
+  支付流程：创建充值订单 → 显示二维码 → 轮询状态 → 支付成功回调到账
+-->
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getWallet, createRecharge, queryPaymentStatus, getRechargeList, getPublicConfig } from '@/api'

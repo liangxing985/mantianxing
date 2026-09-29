@@ -1,3 +1,7 @@
+/**
+ * 钱包控制器
+ * 提供钱包余额查询、流水记录、提现申请等接口，需登录后访问
+ */
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

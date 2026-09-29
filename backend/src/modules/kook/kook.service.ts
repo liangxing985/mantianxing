@@ -1,3 +1,9 @@
+/**
+ * Kook机器人服务模块
+ * 负责Kook机器人的WebSocket连接、订单推送、按钮点击抢单、卡片消息更新
+ * 使用WebSocket模式（webhook模式下按钮点击事件不推送）
+ * 抢单流程：推送订单卡片到派单频道 → 陪玩点击抢单按钮 → 校验权限 → 更新订单 → 更新卡片状态
+ */
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { KookClient, CardBuilder } from '@kookapp/js-sdk';
 import { PrismaService } from '../../database/prisma.service';
@@ -7,14 +13,14 @@ import { SystemConfigService } from '../system-config/system-config.service';
 @Injectable()
 export class KookService implements OnModuleDestroy {
   private readonly logger = new Logger(KookService.name);
-  private client: KookClient | null = null;
-  private connected = false;
-  private reconnectTimer: NodeJS.Timeout | null = null;
+  private client: KookClient | null = null;  // Kook SDK客户端
+  private connected = false;                  // 连接状态
+  private reconnectTimer: NodeJS.Timeout | null = null; // 重连定时器
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly redis: RedisService,
-    private readonly configService: SystemConfigService,
+    private readonly prisma: PrismaService,           // 数据库ORM
+    private readonly redis: RedisService,              // Redis（抢单锁）
+    private readonly configService: SystemConfigService, // 系统配置
   ) {}
 
   /** 连接 Kook WebSocket（带自动重连） */
@@ -84,6 +90,10 @@ export class KookService implements OnModuleDestroy {
   }
 
   /** 发送抢单卡片到指定频道 */
+  /**
+   * 推送订单卡片到Kook派单频道
+   * 仅未指定陪玩的订单（抢单池）才推送，指定陪玩订单直接派单不推送
+   */
   async sendOrderCard(order: any) {
     if (!this.connected || !this.client) return;
     const channelId = process.env.KOOK_ORDER_CHANNEL_ID;
@@ -115,6 +125,7 @@ export class KookService implements OnModuleDestroy {
   }
 
   /** 抢单成功后更新卡片状态 */
+  /** 更新订单卡片状态（抢单成功后将按钮改为"已被抢"） */
   async updateOrderCard(order: any, providerName: string) {
     if (!this.connected || !this.client) return;
 
@@ -312,6 +323,11 @@ export class KookService implements OnModuleDestroy {
   }
 
   /** Kook 端抢单逻辑 */
+  /**
+   * 处理Kook按钮抢单
+   * 流程：校验Kook用户已绑定平台账号 → 校验陪玩资质和接单状态 → 校验游戏权限
+   * → Redis分布式锁抢单 → 更新订单状态 → 更新卡片消息 → 通知老板
+   */
   async handleGrabOrder(kookUserId: string, orderId: number, msgId: string) {
     try {
       const user = await this.prisma.user.findUnique({

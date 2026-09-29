@@ -81,6 +81,11 @@
   </div>
 </template>
 
+<!--
+  支付配置页面（ShareFlow码支付）
+  功能：启用开关、API根地址、支付页根地址、商户ID、通信密钥、回调地址显示、充值统计
+  配置保存到SystemConfig表，后端动态读取
+-->
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'

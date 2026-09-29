@@ -59,6 +59,11 @@
   </div>
 </template>
 
+<!--
+  段位管理页面
+  功能：按游戏筛选段位、段位列表、新增/编辑/删除段位
+  段位用于陪玩按段位定价功能
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '@/utils/request'

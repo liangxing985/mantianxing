@@ -95,6 +95,11 @@
   </div>
 </template>
 
+<!--
+  老板端钱包页面
+  功能：余额展示、充值入口、提现入口、流水记录、星石兑换人民币比例显示
+  充值按钮跳转到/recharge页面，提现跳转到/withdraw页面
+-->
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { showToast } from 'vant'

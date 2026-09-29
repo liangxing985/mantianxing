@@ -1,3 +1,9 @@
+/**
+ * 支付服务模块（ShareFlow码支付对接）
+ * 负责钱包充值的支付流程：创建支付订单 → 生成二维码 → 轮询支付状态 → 回调验签到账
+ * 配置从SystemConfig数据库读取，支持后台动态修改
+ * 签名算法：MD5，参数ASCII排序后拼接&key=密钥
+ */
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SystemConfigService } from '../system-config/system-config.service';
@@ -10,11 +16,14 @@ export class PaymentService {
   private readonly logger = new Logger('PaymentService');
 
   constructor(
-    private prisma: PrismaService,
-    private configService: SystemConfigService,
+    private prisma: PrismaService,           // 数据库ORM
+    private configService: SystemConfigService, // 系统配置服务
   ) {}
 
-  // 从数据库读取配置
+  /**
+   * 从数据库读取支付配置（支持后台动态修改）
+   * 包含：启用开关、API地址、商户ID、通信密钥、星石兑换比例
+   */
   private async getConfig() {
     const [enabled, apiBase, apiRoot, appId, apiKey, coinRate] = await Promise.all([
       this.configService.get('payment_enabled'),
@@ -53,6 +62,9 @@ export class PaymentService {
 
   /**
    * 验证签名
+   */
+  /**
+   * 验证回调签名（防止伪造回调）
    */
   verifySign(params: Record<string, any>, apiKey: string): boolean {
     const sign = params.sign;
@@ -125,6 +137,13 @@ export class PaymentService {
 
   /**
    * 创建充值订单
+   */
+  /**
+   * 创建充值订单
+   * 调用ShareFlow /payment/create接口，返回支付链接和微信/支付宝二维码
+   * @param userId 用户ID
+   * @param amountYuan 充值金额（元）
+   * @param payerName 付款人姓名（可选）
    */
   async createRecharge(userId: number, amountYuan: number, payerName?: string) {
     if (!userId) throw new Error('用户ID无效');
@@ -211,6 +230,10 @@ export class PaymentService {
   /**
    * 查询支付状态（前端轮询用）
    */
+  /**
+   * 查询支付状态（前端轮询用）
+   * 调用ShareFlow /payment/status接口，若已支付则触发到账流程
+   */
   async queryStatus(orderId: number) {
     if (!orderId || isNaN(orderId)) {
       return { payStatus: 'pending_pay', paidAt: null };
@@ -259,6 +282,10 @@ export class PaymentService {
 
   /**
    * 接收 ShareFlow 回调
+   */
+  /**
+   * 处理支付回调（ShareFlow服务器主动通知）
+   * 验证签名 → 幂等检查 → 触发到账流程 → 返回成功响应
    */
   async handleNotify(body: any) {
     const cfg = await this.getConfig();
@@ -316,6 +343,11 @@ export class PaymentService {
   /**
    * 处理支付成功：增加用户余额，记录流水（事务操作保证一致性）
    */
+  /**
+   * 处理支付成功到账（事务化）
+   * 事务内：更新支付订单状态 → 增加用户钱包余额 → 记录充值流水 → 更新累计充值
+   * 幂等设计：已支付订单直接返回，不重复到账
+   */
   private async processPaymentSuccess(orderId: number) {
     const order = await this.prisma.paymentOrder.findUnique({ where: { id: orderId } });
     if (!order || order.payStatus !== 'paid') return;
@@ -362,6 +394,7 @@ export class PaymentService {
   /**
    * 获取用户充值记录
    */
+  /** 获取用户充值记录列表 */
   async getUserRecharges(userId: number, page: number, pageSize: number) {
     const [list, total] = await Promise.all([
       this.prisma.paymentOrder.findMany({
@@ -378,6 +411,7 @@ export class PaymentService {
   /**
    * 管理端：充值统计
    */
+  /** 获取管理端充值统计（今日/累计笔数和金额） */
   async getAdminStats() {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
@@ -408,6 +442,7 @@ export class PaymentService {
   /**
    * 管理端：所有充值订单列表
    */
+  /** 获取管理端所有充值订单列表（支持状态筛选和分页） */
   async getAllOrders(page: number, pageSize: number, status?: string) {
     const where: any = {};
     if (status) where.payStatus = status;

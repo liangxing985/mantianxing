@@ -1,3 +1,9 @@
+/**
+ * 钱包服务模块
+ * 负责用户星石钱包管理：余额查询、冻结/解冻、提现申请、流水记录
+ * 星石为平台虚拟货币，1元=10星石（可配置）
+ * 提现手续费比例可后台配置，无最低手续费限制
+ */
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { getPagination } from '../../common/utils';
@@ -8,11 +14,14 @@ export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private configService: SystemConfigService,
+    private prisma: PrismaService,           // 数据库ORM
+    private configService: SystemConfigService, // 系统配置
   ) {}
 
-  // 获取钱包信息
+  /**
+   * 获取钱包信息
+   * 返回余额、冻结金额、累计收入/充值/提现，以及换算后的人民币金额
+   */
   async getWallet(userId: number) {
     const wallet = await this.prisma.wallet.findUnique({
       where: { userId },
@@ -32,6 +41,7 @@ export class WalletService {
   }
 
   // 获取流水记录
+  /** 获取钱包流水记录（支持类型筛选和分页） */
   async getTransactions(userId: number, query: any) {
     const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
     const where: any = { userId };
@@ -59,6 +69,11 @@ export class WalletService {
   }
 
   // 申请提现
+  /**
+   * 申请提现
+   * 校验最低提现金额和余额，事务内：冻结提现金额 → 创建提现记录 → 记录流水
+   * 手续费按配置比例计算，无最低手续费限制
+   */
   async applyWithdraw(userId: number, data: {
     amount: number;
     payMethod: string;
@@ -127,6 +142,7 @@ export class WalletService {
   }
 
   // 提现记录
+  /** 获取用户提现记录列表（支持状态筛选和分页） */
   async getWithdrawList(userId: number, query: any) {
     const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
     const where: any = { userId };

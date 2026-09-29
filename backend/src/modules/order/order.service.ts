@@ -1,3 +1,9 @@
+/**
+ * 订单服务模块
+ * 负责订单全生命周期管理：创建、取消、抢单、接单、服务、报单、评价
+ * 支持单陪/双陪模式，指定陪玩直接派单或抢单池自动分配
+ * 集成优惠券抵扣、Kook机器人推送、余额冻结/解冻
+ */
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../config/redis.service';
@@ -11,15 +17,21 @@ export class OrderService {
   private readonly logger = new Logger(OrderService.name);
 
   constructor(
-    private prisma: PrismaService,
-    private redis: RedisService,
-    private kookService: KookService,
-    private couponService: CouponService,
+    private prisma: PrismaService,      // 数据库ORM
+    private redis: RedisService,          // Redis缓存（抢单锁等）
+    private kookService: KookService,     // Kook机器人推送
+    private couponService: CouponService, // 优惠券服务
   ) {}
 
   // ==================== 老板端 ====================
 
-  // 创建订单
+  /**
+   * 创建订单（老板端）
+   * 流程：校验服务项目 → 计算单价 → 计算优惠券折扣 → 事务内冻结余额+核销优惠券+创建订单 → Kook推送
+   * @param customerId 老板用户ID
+   * @param data 订单参数（服务项目、游戏、时长、指定陪玩、优惠券等）
+   * @returns 创建的订单
+   */
   async createOrder(customerId: number, data: {
     serviceItemId: number;
     gameId: number;
@@ -217,6 +229,14 @@ export class OrderService {
   }
 
   // 取消订单（老板）
+  /**
+   * 取消订单（老板端）
+   * 仅待支付/待接单/已接单状态可取消，服务中需联系客服
+   * 事务内：更新订单状态 → 退还优惠券 → 解冻余额退回钱包 → 记录流水
+   * @param customerId 老板用户ID
+   * @param orderId 订单ID
+   * @param reason 取消原因
+   */
   async cancelOrder(customerId: number, orderId: number, reason: string) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('订单不存在');
@@ -289,6 +309,10 @@ export class OrderService {
   // ==================== 陪玩端 ====================
 
   // 抢单池列表
+  /**
+   * 获取抢单池列表（陪玩端）
+   * 只返回状态为PAID（待接单）且未过期的订单，支持按游戏筛选和分页
+   */
   async getOrderPool(query: any) {
     const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
     const where: any = {
@@ -322,6 +346,13 @@ export class OrderService {
   }
 
   // 抢单（Redis分布式锁防超抢）
+  /**
+   * 抢单（陪玩端）
+   * 使用Redis分布式锁防止并发抢单，校验陪玩资质和游戏权限
+   * 成功后更新订单状态为ASSIGNED（已接单）并通知老板
+   * @param providerId 陪玩用户ID
+   * @param orderId 订单ID
+   */
   async grabOrder(providerId: number, orderId: number) {
     // 检查陪玩状态
     const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
@@ -401,6 +432,10 @@ export class OrderService {
   }
 
   // 开始服务
+  /**
+   * 开始服务（陪玩端）
+   * 将订单状态从ASSIGNED（已接单）改为SERVING（服务中）
+   */
   async startService(providerId: number, orderId: number) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('订单不存在');
@@ -421,6 +456,14 @@ export class OrderService {
   }
 
   // 提交报单（上传截图凭证）
+  /**
+   * 提交报单（陪玩端）
+   * 陪玩完成服务后提交证据（截图/描述），订单状态改为PENDING_REVIEW（待审核）
+   * 事务内：更新订单状态 → 创建报单记录 → 保存证据图片
+   * @param providerId 陪玩用户ID
+   * @param orderId 订单ID
+   * @param evidences 证据列表（图片URL+描述）
+   */
   async submitReport(providerId: number, orderId: number, evidences: Array<{
     type: string;
     imageUrl: string;
@@ -465,6 +508,10 @@ export class OrderService {
   // ==================== 通用 ====================
 
   // 我的订单列表（老板端：作为顾客；陪玩端：作为接单者）
+  /**
+   * 获取我的订单列表（通用）
+   * 老板和陪玩共用，根据userId和role筛选对应订单，支持状态筛选和分页
+   */
   async getMyOrders(userId: number, query: any) {
     const { skip, take, page, pageSize } = getPagination(query.page, query.pageSize);
     const user = await this.prisma.user.findUnique({
@@ -501,6 +548,10 @@ export class OrderService {
   }
 
   // 订单详情
+  /**
+   * 获取订单详情（通用）
+   * 根据角色返回不同视角的订单信息，包含陪玩信息、报单证据、评价等
+   */
   async getOrderDetail(orderId: number, userId: number, role?: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
@@ -523,6 +574,11 @@ export class OrderService {
   }
 
   // 订单评价
+  /**
+   * 评价订单（老板端）
+   * 订单完成后老板对陪玩进行评分和评价，只能评价一次
+   * 事务内：更新订单评价 → 更新陪玩评分和接单量 → 计算陪玩等级
+   */
   async reviewOrder(customerId: number, orderId: number, data: {
     rating: number;
     content?: string;
