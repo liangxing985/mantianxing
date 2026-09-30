@@ -260,9 +260,10 @@ export class AdminService {
     const providerIncome = order.totalAmount - platformFee;
 
     await this.prisma.$transaction(async (tx) => {
-      // 更新订单
-      await tx.order.update({
-        where: { id: orderId },
+      // 用update的where条件实现乐观锁：只有状态为REVIEWING时才更新
+      // 防止并发审核导致重复结算
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId, status: 'REVIEWING' },
         data: {
           status: 'COMPLETED',
           reviewStatus: 'APPROVED',
@@ -273,6 +274,8 @@ export class AdminService {
           platformFee,
           providerIncome,
         },
+      }).catch(() => {
+        throw new BadRequestException('订单状态已变更，请勿重复审核');
       });
 
       // 解冻老板冻结金额（已在下单时扣除，这里直接结算给陪玩）
@@ -464,7 +467,7 @@ export class AdminService {
 
     await this.prisma.$transaction(async (tx) => {
       if (data.status === 'APPROVED') {
-        // 通过：扣冻结，标记已打款
+        // 通过：扣冻结，标记已打款（用where条件检查frozen是否足够）
         await tx.withdraw.update({
           where: { id: withdrawId },
           data: {
@@ -476,11 +479,13 @@ export class AdminService {
         });
 
         const wallet = await tx.wallet.update({
-          where: { userId: withdraw.userId },
+          where: { userId: withdraw.userId, frozen: { gte: withdraw.amount } },
           data: {
             frozen: { decrement: withdraw.amount },
             totalWithdraw: { increment: withdraw.amount },
           },
+        }).catch(() => {
+          throw new BadRequestException('冻结金额不足，无法确认提现');
         });
 
         // 提现确认流水
@@ -496,7 +501,7 @@ export class AdminService {
           },
         });
       } else {
-        // 拒绝：退回余额
+        // 拒绝：退回余额（用where条件检查frozen是否足够）
         await tx.withdraw.update({
           where: { id: withdrawId },
           data: {
@@ -506,15 +511,16 @@ export class AdminService {
           },
         });
 
-        await tx.wallet.update({
-          where: { userId: withdraw.userId },
+        const wallet = await tx.wallet.update({
+          where: { userId: withdraw.userId, frozen: { gte: withdraw.amount } },
           data: {
             balance: { increment: withdraw.amount },
             frozen: { decrement: withdraw.amount },
           },
+        }).catch(() => {
+          throw new BadRequestException('冻结金额不足，无法退回');
         });
 
-        const wallet = await tx.wallet.findUnique({ where: { userId: withdraw.userId } });
         await tx.walletTransaction.create({
           data: {
             walletId: wallet.id,
@@ -712,43 +718,49 @@ export class AdminService {
     }
 
     const results = [];
-    for (let i = 0; i < providerIds.length; i++) {
-      const providerId = providerIds[i];
-      const targetOrder = groupOrders[i];
-      const provider = await this.prisma.user.findUnique({ where: { id: providerId } });
-      if (!provider || provider.role !== 'PROVIDER') throw new BadRequestException(`陪玩${providerId}不存在`);
-      const profile = await this.prisma.providerProfile.findUnique({ where: { userId: providerId } });
-      if (!profile || profile.applyStatus !== 'APPROVED') throw new BadRequestException(`陪玩${provider.nickname}未通过入驻审核`);
+    // 整个派单过程用事务包裹，中途失败全部回滚，避免部分派单
+    await this.prisma.$transaction(async (tx) => {
+      for (let i = 0; i < providerIds.length; i++) {
+        const providerId = providerIds[i];
+        const targetOrder = groupOrders[i];
+        const provider = await tx.user.findUnique({ where: { id: providerId } });
+        if (!provider || provider.role !== 'PROVIDER') throw new BadRequestException(`陪玩${providerId}不存在`);
+        const profile = await tx.providerProfile.findUnique({ where: { userId: providerId } });
+        if (!profile || profile.applyStatus !== 'APPROVED') throw new BadRequestException(`陪玩${provider.nickname}未通过入驻审核`);
 
-      await this.prisma.order.update({
-        where: { id: targetOrder.id },
-        data: { providerId, status: 'ASSIGNED', acceptedAt: new Date() },
-      });
+        // 用update的where条件检查状态，防止订单已被抢走
+        await tx.order.update({
+          where: { id: targetOrder.id, status: 'PAID', providerId: null },
+          data: { providerId, status: 'ASSIGNED', acceptedAt: new Date() },
+        }).catch(() => {
+          throw new BadRequestException(`订单${targetOrder.id}已被接单或状态变更`);
+        });
 
-      // 记录派单记录
-      await this.prisma.dispatchRecord.create({
-        data: {
-          orderId: targetOrder.id,
-          operatorId,
-          toProviderId: providerId,
-          type: 'DISPATCH',
-        },
-      });
+        // 记录派单记录
+        await tx.dispatchRecord.create({
+          data: {
+            orderId: targetOrder.id,
+            operatorId,
+            toProviderId: providerId,
+            type: 'DISPATCH',
+          },
+        });
 
-      // 通知陪玩
-      await this.prisma.message.create({
-        data: {
-          userId: providerId,
-          type: 'ORDER',
-          title: '客服派单通知',
-          content: `客服为您指派了新订单：${targetOrder.title}，请尽快开始服务`,
-          orderId: targetOrder.id,
-        },
-      });
+        // 通知陪玩
+        await tx.message.create({
+          data: {
+            userId: providerId,
+            type: 'ORDER',
+            title: '客服派单通知',
+            content: `客服为您指派了新订单：${targetOrder.title}，请尽快开始服务`,
+            orderId: targetOrder.id,
+          },
+        });
 
-      results.push({ orderId: targetOrder.id, providerId, providerName: provider.nickname });
-      this.logger.log(`客服${operatorId}手动将订单${targetOrder.id}派给陪玩${providerId}`);
-    }
+        results.push({ orderId: targetOrder.id, providerId, providerName: provider.nickname });
+        this.logger.log(`客服${operatorId}手动将订单${targetOrder.id}派给陪玩${providerId}`);
+      }
+    });
 
     return { success: true, dispatched: results };
   }
@@ -796,32 +808,36 @@ export class AdminService {
     const best = scored[0];
     const bestProfile = best.provider.providerProfile!;
 
-    // 派单
-    await this.prisma.order.update({
-      where: { id: orderId },
-      data: { providerId: best.provider.id, status: 'ASSIGNED', acceptedAt: new Date() },
-    });
+    // 派单（事务保护，用where条件检查状态防止竞态）
+    await this.prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id: orderId, status: 'PAID', providerId: null },
+        data: { providerId: best.provider.id, status: 'ASSIGNED', acceptedAt: new Date() },
+      }).catch(() => {
+        throw new BadRequestException('订单已被接单或状态变更');
+      });
 
-    // 记录派单记录
-    await this.prisma.dispatchRecord.create({
-      data: {
-        orderId,
-        operatorId,
-        toProviderId: best.provider.id,
-        type: 'AUTO',
-        reason: `自动派单，权重得分${best.score.toFixed(1)}（在线${bestProfile.isOnline ? '是' : '否'}，评分${bestProfile.rating}，接单${bestProfile.orderCount}单）`,
-      },
-    });
+      // 记录派单记录
+      await tx.dispatchRecord.create({
+        data: {
+          orderId,
+          operatorId,
+          toProviderId: best.provider.id,
+          type: 'AUTO',
+          reason: `自动派单，权重得分${best.score.toFixed(1)}（在线${bestProfile.isOnline ? '是' : '否'}，评分${bestProfile.rating}，接单${bestProfile.orderCount}单）`,
+        },
+      });
 
-    // 通知陪玩
-    await this.prisma.message.create({
-      data: {
-        userId: best.provider.id,
-        type: 'ORDER',
-        title: '系统自动派单通知',
-        content: `系统为您自动匹配了新订单：${order.title}，请尽快开始服务`,
-        orderId,
-      },
+      // 通知陪玩
+      await tx.message.create({
+        data: {
+          userId: best.provider.id,
+          type: 'ORDER',
+          title: '系统自动派单通知',
+          content: `系统为您自动匹配了新订单：${order.title}，请尽快开始服务`,
+          orderId,
+        },
+      });
     });
 
     this.logger.log(`自动派单：订单${orderId} → 陪玩${best.provider.id}，得分${best.score.toFixed(1)}`);

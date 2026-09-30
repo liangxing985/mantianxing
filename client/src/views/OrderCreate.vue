@@ -523,16 +523,28 @@ const handleSubmit = async () => {
           { providerId: secondProvider.value.id, price: secondProviderPrice.value },
         ]
         let firstId = 0
+        let successCount = 0
         for (let i = 0; i < orders.length; i++) {
-          const res: any = await createOrder({
-            ...form,
-            providerId: orders[i].providerId,
-            title: `${gameName}双陪`,
-            overridePrice: orders[i].price,
-            productName: gameName,
-            orderGroup,
-          })
-          if (i === 0) firstId = res.id
+          try {
+            const res: any = await createOrder({
+              ...form,
+              providerId: orders[i].providerId,
+              title: `${gameName}双陪`,
+              overridePrice: orders[i].price,
+              productName: gameName,
+              orderGroup,
+            })
+            if (i === 0) firstId = res.id
+            successCount++
+          } catch (e: any) {
+            // 第二个订单失败时，提示用户第一个已创建，需联系客服处理
+            if (successCount > 0) {
+              alert(`第${i + 1}位陪玩下单失败：${e?.response?.data?.message || '未知错误'}\n前${successCount}位陪玩订单已创建成功，请联系客服处理`)
+              router.replace(`/order/${firstId}`)
+              return
+            }
+            throw e
+          }
         }
         alert('双陪下单成功')
         router.replace(`/order/${firstId}`)
@@ -550,16 +562,27 @@ const handleSubmit = async () => {
         router.replace(`/order/${res.id}`)
       } else {
         let firstOrderId = 0
+        let successCount = 0
         for (let i = 0; i < selectedProviders.value.length; i++) {
           const p = selectedProviders.value[i]
-          const res: any = await createOrder({
-            ...form,
-            providerId: p.id,
-            title: productName || '陪玩订单',
-            overridePrice: productPrice || undefined,
-            productName,
-          })
-          if (i === 0) firstOrderId = res.id
+          try {
+            const res: any = await createOrder({
+              ...form,
+              providerId: p.id,
+              title: productName || '陪玩订单',
+              overridePrice: productPrice || undefined,
+              productName,
+            })
+            if (i === 0) firstOrderId = res.id
+            successCount++
+          } catch (e: any) {
+            if (successCount > 0) {
+              alert(`第${i + 1}位陪玩下单失败：${e?.response?.data?.message || '未知错误'}\n前${successCount}位陪玩订单已创建成功，请联系客服处理`)
+              router.replace(`/order/${firstOrderId}`)
+              return
+            }
+            throw e
+          }
         }
         alert(`已为${selectedProviders.value.length}位陪玩下单`)
         router.replace(`/order/${firstOrderId}`)

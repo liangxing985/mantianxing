@@ -28,6 +28,7 @@ import { CouponModule } from './modules/coupon/coupon.module';
 import { BannerModule } from './modules/banner/banner.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { GameRankModule } from './modules/game-rank/game-rank.module';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { GameRankModule } from './modules/game-rank/game-rank.module';
     BannerModule,
     PaymentModule,
     GameRankModule,
+    SchedulerModule,
   ],
 })
 export class AppModule {}

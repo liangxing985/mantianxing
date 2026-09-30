@@ -91,22 +91,22 @@ export class WalletService {
     if (amount < minWithdraw) {
       throw new BadRequestException(`最低提现${minWithdraw}星石（${(minWithdraw / coinRate).toFixed(1)}元）`);
     }
-    if (wallet.balance < amount) {
-      throw new BadRequestException('余额不足');
-    }
 
     // 手续费按配置比例计算（向下取整）
     const fee = Math.floor(amount * withdrawFeeRate / 100);
     const realAmount = amount - fee;
 
     await this.prisma.$transaction(async (tx) => {
-      // 冻结提现金额
-      await tx.wallet.update({
-        where: { userId },
+      // 用update的where条件实现乐观锁：只有余额>=amount时才扣减
+      // 防止并发提现导致余额变负
+      const walletUpdate = await tx.wallet.update({
+        where: { userId, balance: { gte: amount } },
         data: {
           balance: { decrement: amount },
           frozen: { increment: amount },
         },
+      }).catch(() => {
+        throw new BadRequestException('余额不足');
       });
 
       // 创建提现申请
@@ -124,14 +124,13 @@ export class WalletService {
       });
 
       // 流水
-      const updatedWallet = await tx.wallet.findUnique({ where: { userId } });
       await tx.walletTransaction.create({
         data: {
-          walletId: wallet.id,
+          walletId: walletUpdate.id,
           userId,
           type: 'WITHDRAW',
           amount: -amount,
-          balanceAfter: updatedWallet.balance,
+          balanceAfter: walletUpdate.balance,
           remark: `申请提现${amount}星石，手续费${fee}星石，实际到账${(realAmount / coinRate).toFixed(2)}元`,
         },
       });

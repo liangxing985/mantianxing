@@ -256,19 +256,17 @@ export class PaymentService {
         const res: any = await this.get(`${cfg.API_BASE}/payment/status/${order.shareflowNo}`);
         if (res.code === 0 && res.data) {
           const status = res.data.pay_status;
-          // 如果状态变化，更新本地
-          if (status !== order.payStatus) {
+          // 如果是已支付，调用processPaymentSuccess完成原子操作（更新状态+到账）
+          if (status === 'paid' && order.payStatus !== 'paid') {
+            await this.processPaymentSuccess(order.id, {
+              paidAt: res.data.paid_at ? new Date(res.data.paid_at) : new Date(),
+            });
+          } else if (status !== order.payStatus && status !== 'paid') {
+            // 非paid状态变化（如expired），单独更新
             await this.prisma.paymentOrder.update({
               where: { id: order.id },
-              data: {
-                payStatus: status,
-                paidAt: res.data.paid_at ? new Date(res.data.paid_at) : null,
-              },
+              data: { payStatus: status },
             });
-            // 如果是已支付，处理到账
-            if (status === 'paid') {
-              await this.processPaymentSuccess(order.id);
-            }
           }
           return { payStatus: status, paidAt: res.data.paid_at };
         }
@@ -323,18 +321,12 @@ export class PaymentService {
       return { code: -1, msg: '金额不匹配' };
     }
 
-    // 6. 更新订单状态并到账
-    await this.prisma.paymentOrder.update({
-      where: { id: order.id },
-      data: {
-        payStatus: 'paid',
-        paidAt: body.paid_at ? new Date(body.paid_at) : new Date(),
-        transactionId: body.transaction_id || null,
-        shareflowNo: body.order_no || order.shareflowNo,
-      },
+    // 6. 更新订单状态并到账（原子操作）
+    await this.processPaymentSuccess(order.id, {
+      paidAt: body.paid_at ? new Date(body.paid_at) : new Date(),
+      transactionId: body.transaction_id || null,
+      shareflowNo: body.order_no || order.shareflowNo,
     });
-
-    await this.processPaymentSuccess(order.id);
 
     this.logger.log(`订单 ${outOrderNo} 支付成功，金额 ${totalAmount}，到账 ${order.coinAmount} 星石`);
     return { code: 0, msg: 'success' };
@@ -344,13 +336,19 @@ export class PaymentService {
    * 处理支付成功：增加用户余额，记录流水（事务操作保证一致性）
    */
   /**
-   * 处理支付成功到账（事务化）
+   * 处理支付成功到账（事务化，原子操作）
    * 事务内：更新支付订单状态 → 增加用户钱包余额 → 记录充值流水 → 更新累计充值
-   * 幂等设计：已支付订单直接返回，不重复到账
+   * 幂等设计：已支付且已到账的订单直接返回，不重复到账
+   * @param orderId 支付订单ID
+   * @param statusUpdate 可选的支付订单状态更新字段（paidAt/transactionId/shareflowNo）
    */
-  private async processPaymentSuccess(orderId: number) {
+  private async processPaymentSuccess(orderId: number, statusUpdate?: {
+    paidAt?: Date;
+    transactionId?: string | null;
+    shareflowNo?: string;
+  }) {
     const order = await this.prisma.paymentOrder.findUnique({ where: { id: orderId } });
-    if (!order || order.payStatus !== 'paid') return;
+    if (!order) return;
 
     // 检查是否已经到账（幂等）
     const existingTx = await this.prisma.walletTransaction.findFirst({
@@ -365,8 +363,22 @@ export class PaymentService {
       return;
     }
 
-    // 事务：增加余额 + 记录流水
+    // 事务：更新支付订单状态 + 增加余额 + 记录流水（原子操作）
     await this.prisma.$transaction(async (tx) => {
+      // 更新支付订单状态为paid（如果还不是paid）
+      if (order.payStatus !== 'paid') {
+        await tx.paymentOrder.update({
+          where: { id: orderId },
+          data: {
+            payStatus: 'paid',
+            paidAt: statusUpdate?.paidAt || new Date(),
+            transactionId: statusUpdate?.transactionId ?? null,
+            shareflowNo: statusUpdate?.shareflowNo || order.shareflowNo,
+          },
+        });
+      }
+
+      // 增加用户余额
       const wallet = await tx.wallet.update({
         where: { userId: order.userId },
         data: {
@@ -375,6 +387,7 @@ export class PaymentService {
         },
       });
 
+      // 记录充值流水
       await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,

@@ -135,15 +135,19 @@ export class OrderService {
 
     const totalAmount = Math.max(0, originalAmount - discountAmount);
 
-    // 创建订单（事务：扣余额+冻结+创建订单+核销优惠券，事务内检查余额防止竞态）
+    // 创建订单（事务：扣余额+冻结+创建订单+核销优惠券，用update where条件实现乐观锁防止超扣）
     const order = await this.prisma.$transaction(async (tx) => {
-      // 事务内重新查询钱包并检查余额（加行锁）
-      const wallet = await tx.wallet.findUnique({
-        where: { userId: customerId },
-      });
-      if (!wallet || wallet.balance < totalAmount) {
+      // 用update的where条件实现乐观锁：只有余额>=totalAmount时才扣减
+      // 如果更新影响0行，Prisma会抛P2025异常，捕获后转为余额不足
+      const walletUpdate = await tx.wallet.update({
+        where: { userId: customerId, balance: { gte: totalAmount } },
+        data: {
+          balance: { decrement: totalAmount },
+          frozen: { increment: totalAmount },
+        },
+      }).catch(() => {
         throw new BadRequestException('星石余额不足，请先充值');
-      }
+      });
 
       // 核销优惠券
       if (userCouponId) {
@@ -160,23 +164,14 @@ export class OrderService {
         }
       }
 
-      // 扣减余额，冻结金额
-      await tx.wallet.update({
-        where: { userId: customerId },
-        data: {
-          balance: { decrement: totalAmount },
-          frozen: { increment: totalAmount },
-        },
-      });
-
       // 记录流水
       await tx.walletTransaction.create({
         data: {
-          walletId: wallet.id,
+          walletId: walletUpdate.id,
           userId: customerId,
           type: 'FROZEN',
           amount: -totalAmount,
-          balanceAfter: wallet.balance - totalAmount,
+          balanceAfter: walletUpdate.balance,
           remark: `下单冻结：${data.title}`,
         },
       });
@@ -278,24 +273,25 @@ export class OrderService {
         }
       }
 
-      // 解冻金额，退回余额
-      await tx.wallet.update({
-        where: { userId: customerId },
+      // 解冻金额，退回余额（用where条件检查frozen是否足够，防止负数）
+      const walletUpdate = await tx.wallet.update({
+        where: { userId: customerId, frozen: { gte: order.totalAmount } },
         data: {
           balance: { increment: order.totalAmount },
           frozen: { decrement: order.totalAmount },
         },
+      }).catch(() => {
+        throw new BadRequestException('冻结金额不足，无法取消订单');
       });
 
       // 记录流水
-      const wallet = await tx.wallet.findUnique({ where: { userId: customerId } });
       await tx.walletTransaction.create({
         data: {
-          walletId: wallet.id,
+          walletId: walletUpdate.id,
           userId: customerId,
           type: 'UNFROZEN',
           amount: order.totalAmount,
-          balanceAfter: wallet.balance,
+          balanceAfter: walletUpdate.balance,
           orderId,
           remark: `订单取消退款：${order.orderNo}`,
         },
@@ -599,13 +595,15 @@ export class OrderService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      // 更新订单评价
+      // 更新订单评价（用where条件检查customerRating为null，防止重复评价和竞态）
       await tx.order.update({
-        where: { id: orderId },
+        where: { id: orderId, customerRating: null },
         data: {
           customerRating: data.rating,
           customerComment: data.content,
         },
+      }).catch(() => {
+        throw new BadRequestException('订单已评价');
       });
 
       // 创建评价记录
@@ -621,7 +619,7 @@ export class OrderService {
         },
       });
 
-      // 更新陪玩评分
+      // 更新陪玩评分（先查后算在事务内，配合上面的乐观锁防止并发评价）
       const profile = await tx.providerProfile.findUnique({ where: { userId: order.providerId } });
       if (profile) {
         const newRatingCount = profile.ratingCount + 1;
