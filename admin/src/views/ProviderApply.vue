@@ -63,6 +63,9 @@
   </div>
 </template>
 
+<!--
+  陪玩入驻审核页面：入驻申请列表，通过/拒绝
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

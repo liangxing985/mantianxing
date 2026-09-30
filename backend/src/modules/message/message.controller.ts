@@ -1,3 +1,7 @@
+/**
+ * 站内消息控制器
+ * 提供消息列表、消息详情、已读标记接口，需登录后访问
+ */
 import { Controller, Get, Put, Param, Query, UseGuards } from '@nestjs/common';
 import { MessageService } from './message.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

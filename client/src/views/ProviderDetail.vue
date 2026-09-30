@@ -152,6 +152,9 @@
   </div>
 </template>
 
+<!--
+  陪玩详情页面：陪玩资料、服务项目、评价、下单入口
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'

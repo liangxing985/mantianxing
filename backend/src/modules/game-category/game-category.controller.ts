@@ -1,3 +1,8 @@
+/**
+ * 游戏分类控制器
+ * 公开：分类列表（含游戏）
+ * 管理端：分类CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { GameCategoryService } from './game-category.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

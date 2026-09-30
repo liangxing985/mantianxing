@@ -1,3 +1,8 @@
+/**
+ * 游戏分类服务模块
+ * 负责游戏分类的公开查询和管理端CRUD
+ * 分类用于游戏归类展示，支持标准化分类管理
+ */
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

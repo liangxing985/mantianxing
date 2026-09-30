@@ -1,3 +1,8 @@
+/**
+ * 排行榜服务模块
+ * 负责陪玩收入排行榜、接单量排行榜、评分排行榜
+ * 老板端不显示陪玩收入榜单（前端控制）
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

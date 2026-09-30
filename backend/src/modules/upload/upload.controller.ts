@@ -1,3 +1,8 @@
+/**
+ * 文件上传控制器
+ * 提供图片上传接口，需登录后访问
+ * 上传文件存储在服务器uploads目录，返回可访问的URL
+ */
 import { Controller, Post, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';

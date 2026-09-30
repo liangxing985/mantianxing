@@ -75,6 +75,9 @@
   </div>
 </template>
 
+<!--
+  陪玩端注册页面：账号注册、入驻申请
+-->
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'

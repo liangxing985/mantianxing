@@ -1,3 +1,8 @@
+/**
+ * 游戏控制器
+ * 提供游戏列表（含服务项目）的公开查询接口
+ * 管理端的游戏CRUD在admin.controller.ts中
+ */
 import { Controller, Get, Param } from '@nestjs/common';
 import { GameService } from './game.service';
 

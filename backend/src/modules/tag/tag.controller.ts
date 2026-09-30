@@ -1,3 +1,8 @@
+/**
+ * 标签控制器
+ * 公开：标签列表（技能/声音标签）
+ * 管理端：标签CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { TagService } from './tag.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

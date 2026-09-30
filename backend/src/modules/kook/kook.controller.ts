@@ -1,3 +1,8 @@
+/**
+ * Kook机器人控制器
+ * 提供Kook Webhook回调接口（当前使用WebSocket模式，此接口备用）
+ * 以及Kook用户绑定/解绑接口
+ */
 import { Controller, Post, Body, Logger, Res } from '@nestjs/common';
 import { Response } from 'express';
 import { KookService } from './kook.service';

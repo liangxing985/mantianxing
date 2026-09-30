@@ -1,3 +1,9 @@
+/**
+ * 陪玩控制器
+ * 公开：陪玩列表、陪玩详情
+ * 陪玩端：入驻申请、服务项目管理、可接游戏设置、接单状态切换
+ * 管理端：入驻审核、陪玩管理（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Body, Query, Param, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ProviderService } from './provider.service';

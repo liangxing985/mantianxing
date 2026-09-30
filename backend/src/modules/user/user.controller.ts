@@ -1,3 +1,7 @@
+/**
+ * 用户控制器
+ * 提供用户资料查询、资料更新接口，需登录后访问
+ */
 import { Controller, Get, Put, Body, Query, UseGuards } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

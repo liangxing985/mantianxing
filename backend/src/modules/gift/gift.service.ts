@@ -1,3 +1,8 @@
+/**
+ * 礼物打赏服务模块
+ * 负责礼物列表查询、打赏发送、打赏分成计算
+ * 平台抽成比例可后台配置（gift_platform_fee_rate），剩余部分归陪玩
+ */
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SystemConfigService } from '../system-config/system-config.service';

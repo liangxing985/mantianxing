@@ -70,6 +70,9 @@
   </div>
 </template>
 
+<!--
+  优惠券页面：可领取优惠券列表、我的优惠券（未使用/已使用/已过期）
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'

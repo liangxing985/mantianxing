@@ -75,6 +75,9 @@
   </div>
 </template>
 
+<!--
+  老板端登录页面：账号密码登录
+-->
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'

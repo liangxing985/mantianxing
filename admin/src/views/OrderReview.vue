@@ -64,6 +64,9 @@
   </div>
 </template>
 
+<!--
+  报单审核页面：陪玩提交的服务报单审核，通过/拒绝，通过后自动结算
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

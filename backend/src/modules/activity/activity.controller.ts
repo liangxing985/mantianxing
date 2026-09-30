@@ -1,3 +1,8 @@
+/**
+ * 活动控制器
+ * 公开：活动列表、活动详情
+ * 管理端：活动CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ActivityService } from './activity.service';

@@ -1,3 +1,8 @@
+/**
+ * 用户服务模块
+ * 负责用户个人资料管理（昵称、头像、简介、性别、手机）、用户信息查询
+ * 所有用户（老板/陪玩/管理员）共用此服务
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { getPagination } from '../../common/utils';

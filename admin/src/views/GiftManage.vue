@@ -11,6 +11,9 @@
     ]"
   />
 </template>
+<!--
+  礼物管理页面：礼物列表、新增/编辑/删除、价格设置
+-->
 <script setup lang="ts">
 import GenericManage from '@/components/GenericManage.vue'
 </script>

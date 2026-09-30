@@ -69,6 +69,9 @@
   </div>
 </template>
 
+<!--
+  详细数据看板页面：订单趋势、收入统计、用户增长、平台抽成等多维度数据
+-->
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import request from '@/utils/request'

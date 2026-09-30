@@ -1,3 +1,8 @@
+/**
+ * 认证控制器
+ * 提供注册、登录、获取当前用户信息接口
+ * 注册支持老板/陪玩两种角色，管理员账号由系统预置
+ */
 import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

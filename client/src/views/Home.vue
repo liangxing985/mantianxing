@@ -133,6 +133,9 @@
   </div>
 </template>
 
+<!--
+  老板端首页：轮播图、快捷入口、推荐陪玩、活动大厅入口
+-->
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

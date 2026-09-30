@@ -67,6 +67,9 @@
     </van-popup>
   </div>
 </template>
+<!--
+  订单详情页面：订单信息、服务操作、报单提交
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'

@@ -67,6 +67,9 @@
   </div>
 </template>
 
+<!--
+  提现审核页面：提现申请列表，通过/拒绝，通过后扣款
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

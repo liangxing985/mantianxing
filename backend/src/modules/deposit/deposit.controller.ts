@@ -1,3 +1,8 @@
+/**
+ * 保证金控制器
+ * 陪玩端：保证金查询、缴纳、退还
+ * 管理端：保证金管理（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { DepositService } from './deposit.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

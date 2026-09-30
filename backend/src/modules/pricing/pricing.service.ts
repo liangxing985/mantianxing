@@ -1,3 +1,8 @@
+/**
+ * 定价服务模块
+ * 负责游戏段位定价管理，支持按游戏+段位设置不同价格
+ * 管理端可配置，老板端下单时根据陪玩段位计算价格
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

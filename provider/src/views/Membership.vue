@@ -26,6 +26,9 @@
   </div>
 </template>
 
+<!--
+  会员中心页面：会员等级、开通会员、会员权益
+-->
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import request from '@/utils/request'

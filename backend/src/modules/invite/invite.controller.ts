@@ -1,3 +1,7 @@
+/**
+ * 邀请分销控制器
+ * 提供邀请码生成、邀请关系查询、佣金记录查询接口，需登录后访问
+ */
 import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { InviteService } from './invite.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

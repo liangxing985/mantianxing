@@ -188,6 +188,9 @@
   </div>
 </template>
 
+<!--
+  系统设置页面：平台名称、Logo、抽成比例、兑换率、提现手续费等配置
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'

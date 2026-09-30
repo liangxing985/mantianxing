@@ -71,6 +71,9 @@
   </div>
 </template>
 
+<!--
+  陪玩端登录页面：账号密码登录
+-->
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'

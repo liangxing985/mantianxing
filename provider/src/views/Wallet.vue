@@ -154,6 +154,9 @@
   </div>
 </template>
 
+<!--
+  钱包页面：余额、收入记录、提现入口
+-->
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { showToast, showSuccessToast } from 'vant'

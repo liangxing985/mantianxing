@@ -1,3 +1,8 @@
+/**
+ * 系统配置控制器
+ * 公开：公共配置（平台名称、Logo、兑换率等）
+ * 管理端：所有配置的读取和更新（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { SystemConfigService } from './system-config.service';

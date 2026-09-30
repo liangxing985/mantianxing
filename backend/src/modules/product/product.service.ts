@@ -1,3 +1,8 @@
+/**
+ * 商品服务模块
+ * 负责商品的公开列表查询、详情查询，以及管理端的商品CRUD
+ * 商品是老板端商城的核心展示单元
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

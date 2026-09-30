@@ -1,3 +1,8 @@
+/**
+ * 轮播图服务模块
+ * 负责老板端首页轮播图的公开查询和管理端CRUD
+ * 支持启用/禁用、排序、图片上传
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

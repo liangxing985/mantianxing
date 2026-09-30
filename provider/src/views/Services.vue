@@ -29,6 +29,9 @@
     <van-empty v-if="priceList.length === 0" description="暂无定价，请联系运营配置" />
   </div>
 </template>
+<!--
+  服务管理页面：服务项目设置、价格设置
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getMyProfile, getPricingByRank } from '@/api'

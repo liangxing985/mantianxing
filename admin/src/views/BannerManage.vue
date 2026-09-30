@@ -74,6 +74,9 @@
   </div>
 </template>
 
+<!--
+  轮播图管理页面：轮播图列表、新增/编辑/删除、启用/禁用、图片上传
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '@/utils/request'

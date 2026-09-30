@@ -182,6 +182,9 @@
   </div>
 </template>
 
+<!--
+  个人中心页面：个人资料、头像修改、设置入口
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'

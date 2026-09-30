@@ -67,6 +67,9 @@
   </div>
 </template>
 
+<!--
+  游戏分类管理页面：分类列表、新增/编辑/删除、图标上传
+-->
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import request from '@/utils/request'

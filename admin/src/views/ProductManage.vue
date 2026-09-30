@@ -122,6 +122,9 @@
   </div>
 </template>
 
+<!--
+  商品管理页面：商品列表、新增/编辑/删除、上下架
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

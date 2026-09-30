@@ -1,3 +1,8 @@
+/**
+ * 活动服务模块
+ * 负责活动列表查询、活动详情、管理端活动CRUD
+ * 活动在老板端活动大厅展示
+ */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

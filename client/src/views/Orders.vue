@@ -76,6 +76,9 @@
   </div>
 </template>
 
+<!--
+  我的订单页面：订单列表、状态筛选、订单详情入口
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showConfirmDialog, showToast } from 'vant'

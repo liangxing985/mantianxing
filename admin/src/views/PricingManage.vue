@@ -32,6 +32,9 @@
   </div>
 </template>
 
+<!--
+  定价管理页面：按游戏+段位设置价格，新增/编辑/删除
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'

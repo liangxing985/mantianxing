@@ -160,6 +160,9 @@
   </div>
 </template>
 
+<!--
+  个人中心页面：个人资料、头像修改、服务管理入口
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

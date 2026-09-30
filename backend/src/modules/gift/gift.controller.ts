@@ -1,3 +1,8 @@
+/**
+ * 礼物打赏控制器
+ * 公开/用户端：礼物列表、发送打赏
+ * 管理端：礼物CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Body, Param, Put, Delete, Query, UseGuards } from '@nestjs/common';
 import { GiftService } from './gift.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

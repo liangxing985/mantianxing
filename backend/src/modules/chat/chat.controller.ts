@@ -1,3 +1,8 @@
+/**
+ * 聊天控制器
+ * 提供会话列表、消息记录查询接口，需登录后访问
+ * 实时消息通过WebSocket推送（chat.gateway.ts）
+ */
 import { Controller, Get, Post, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

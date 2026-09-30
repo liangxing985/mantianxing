@@ -1,3 +1,8 @@
+/**
+ * 排行榜控制器
+ * 提供陪玩收入榜、接单量榜、评分榜接口
+ * 老板端不显示收入榜单（前端控制）
+ */
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { RankService } from './rank.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

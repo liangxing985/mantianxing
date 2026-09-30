@@ -1,3 +1,8 @@
+/**
+ * 轮播图控制器
+ * 公开：启用的轮播图列表
+ * 管理端：轮播图CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { BannerService } from './banner.service';

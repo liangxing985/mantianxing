@@ -45,6 +45,9 @@
   </div>
 </template>
 
+<!--
+  活动中心页面：展示平台进行中的活动列表，卡片式布局
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'

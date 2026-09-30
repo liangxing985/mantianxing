@@ -1,3 +1,8 @@
+/**
+ * 会员服务模块
+ * 负责会员等级列表查询、会员开通、会员权益管理
+ * 会员等级和价格可在管理后台配置
+ */
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

@@ -59,6 +59,9 @@
   </div>
 </template>
 
+<!--
+  保证金页面：保证金余额、缴纳、退还记录
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'

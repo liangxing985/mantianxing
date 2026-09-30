@@ -11,6 +11,9 @@
     </van-list>
   </div>
 </template>
+<!--
+  消息中心页面：系统消息、订单消息列表
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { getMessages } from '@/api'

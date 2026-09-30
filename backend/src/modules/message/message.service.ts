@@ -1,3 +1,8 @@
+/**
+ * 消息服务模块
+ * 负责站内消息的发送、查询、已读标记
+ * 用于订单状态通知、系统通知等场景
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { getPagination } from '../../common/utils';

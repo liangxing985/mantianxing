@@ -80,6 +80,9 @@
   </div>
 </template>
 
+<!--
+  用户管理页面：老板用户列表、详情、封禁/解封
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

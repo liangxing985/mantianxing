@@ -1,3 +1,8 @@
+/**
+ * 保证金服务模块
+ * 负责陪玩保证金的缴纳、查询、退还
+ * 保证金用于保障订单履约，违规时可扣除
+ */
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

@@ -1,3 +1,8 @@
+/**
+ * 游戏服务模块
+ * 负责游戏类目和服务项目的公开查询
+ * 管理端的游戏CRUD在admin.service.ts中
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

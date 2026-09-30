@@ -91,6 +91,9 @@
   </div>
 </template>
 
+<!--
+  活动管理页面：活动列表、新增/编辑/删除活动、启用/禁用
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

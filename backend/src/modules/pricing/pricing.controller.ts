@@ -1,3 +1,8 @@
+/**
+ * 定价控制器
+ * 公开：按游戏查询定价
+ * 管理端：定价CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { PricingService } from './pricing.service';

@@ -1,3 +1,8 @@
+/**
+ * 游戏段位控制器
+ * 公开：按游戏查询段位列表
+ * 管理端：段位CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { GameRankService } from './game-rank.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

@@ -87,6 +87,9 @@
   </div>
 </template>
 
+<!--
+  老板端注册页面：账号注册
+-->
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'

@@ -104,6 +104,9 @@
   </div>
 </template>
 
+<!--
+  提现页面：余额展示、提现表单、提现记录、费用说明
+-->
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { getWallet, createWithdraw, getWithdrawList, getPublicConfig } from '@/api'

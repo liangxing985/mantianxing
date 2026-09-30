@@ -1,3 +1,8 @@
+/**
+ * 邀请分销服务模块
+ * 负责邀请码生成、邀请关系绑定、佣金计算与发放
+ * 佣金比例可后台配置（invite_commission_rate），订单审核通过后自动发放
+ */
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { SystemConfigService } from '../system-config/system-config.service';

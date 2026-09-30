@@ -32,6 +32,9 @@
   </div>
 </template>
 
+<!--
+  即时通讯聊天页面：与老板/客服实时对话，WebSocket实时消息
+-->
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'

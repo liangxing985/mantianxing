@@ -1,3 +1,8 @@
+/**
+ * 会员控制器
+ * 用户端：会员等级列表、开通会员
+ * 管理端：会员等级CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards } from '@nestjs/common';
 import { MembershipService } from './membership.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';

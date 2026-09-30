@@ -1,3 +1,8 @@
+/**
+ * 商品控制器
+ * 公开：商品列表、商品详情
+ * 管理端：商品CRUD（需ADMIN/OPERATOR角色）
+ */
 import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { ProductService } from './product.service';

@@ -11,6 +11,9 @@
     ]"
   />
 </template>
+<!--
+  会员等级管理页面：等级列表、新增/编辑/删除、价格和权益设置
+-->
 <script setup lang="ts">
 import GenericManage from '@/components/GenericManage.vue'
 </script>

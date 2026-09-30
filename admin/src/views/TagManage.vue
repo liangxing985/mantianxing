@@ -10,6 +10,9 @@
     ]"
   />
 </template>
+<!--
+  标签管理页面：技能/声音标签列表、新增/编辑/删除
+-->
 <script setup lang="ts">
 import GenericManage from '@/components/GenericManage.vue'
 </script>

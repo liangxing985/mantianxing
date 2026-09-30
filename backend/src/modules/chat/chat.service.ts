@@ -1,3 +1,8 @@
+/**
+ * 聊天服务模块
+ * 负责会话创建、消息记录查询
+ * 实时消息通过WebSocket（chat.gateway.ts）推送，此服务负责数据持久化
+ */
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

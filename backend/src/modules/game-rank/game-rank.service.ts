@@ -1,3 +1,8 @@
+/**
+ * 游戏段位服务模块
+ * 负责游戏段位的查询和管理端CRUD
+ * 段位用于陪玩按段位定价功能
+ */
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

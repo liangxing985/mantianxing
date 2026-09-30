@@ -1,3 +1,8 @@
+/**
+ * 陪玩服务模块
+ * 负责陪玩列表查询、陪玩详情、陪玩入驻申请、服务项目管理、可接游戏设置、接单状态切换
+ * 陪玩等级根据接单量自动计算（1-10级）
+ */
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../config/redis.service';

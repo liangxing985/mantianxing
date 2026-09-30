@@ -30,6 +30,9 @@
   </div>
 </template>
 
+<!--
+  我的游戏页面：可接游戏设置、游戏资质提交
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showToast } from 'vant'

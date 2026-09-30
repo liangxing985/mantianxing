@@ -49,6 +49,9 @@
   </div>
 </template>
 
+<!--
+  游戏审核页面：陪玩提交的游戏资质审核，通过/拒绝
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

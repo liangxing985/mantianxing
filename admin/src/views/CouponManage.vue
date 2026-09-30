@@ -92,6 +92,9 @@
   </div>
 </template>
 
+<!--
+  优惠券管理页面：优惠券列表、新增/编辑/删除、满减/折扣/新人券类型
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import request from '@/utils/request'

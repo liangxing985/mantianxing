@@ -1,3 +1,8 @@
+/**
+ * 文件上传服务模块
+ * 负责图片等文件的本地上传，存储在uploads目录
+ * 支持头像、商品图片、报单证据、轮播图等上传场景
+ */
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';

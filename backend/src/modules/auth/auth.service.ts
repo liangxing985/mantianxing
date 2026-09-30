@@ -1,3 +1,8 @@
+/**
+ * 认证服务模块
+ * 负责用户注册、登录、JWT令牌生成与验证
+ * 密码使用bcrypt加密，支持老板/陪玩/管理员三种角色注册
+ */
 import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';

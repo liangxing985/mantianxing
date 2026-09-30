@@ -1,3 +1,8 @@
+/**
+ * 系统配置服务模块
+ * 负责所有系统配置的读取和更新，配置存储在数据库中支持后台动态修改
+ * 包含：平台名称/Logo、抽成比例、星石兑换率、提现手续费、支付配置、礼物分成、邀请佣金等
+ */
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

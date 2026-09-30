@@ -1,3 +1,8 @@
+/**
+ * 标签服务模块
+ * 负责技能标签、声音标签的查询和管理
+ * 标签用于陪玩个人资料展示，支持按分类筛选
+ */
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 

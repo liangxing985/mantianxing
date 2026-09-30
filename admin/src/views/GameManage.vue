@@ -107,6 +107,9 @@
   </div>
 </template>
 
+<!--
+  游戏管理页面：游戏列表、新增/编辑/删除、分类选择、区服配置、独立开关
+-->
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'

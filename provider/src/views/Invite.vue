@@ -45,6 +45,9 @@
   </div>
 </template>
 
+<!--
+  邀请分销页面：我的邀请码、邀请记录、佣金记录
+-->
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import request from '@/utils/request'
